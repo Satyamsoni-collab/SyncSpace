@@ -9,6 +9,7 @@ export default function Toolbar({
     <div className="toolbar">
 
       <button
+        type="button"
         className={tool === "pen" ? "active" : ""}
         onClick={() => setTool("pen")}
       >
@@ -16,6 +17,7 @@ export default function Toolbar({
       </button>
 
       <button
+        type="button"
         className={tool === "rectangle" ? "active" : ""}
         onClick={() => setTool("rectangle")}
       >
@@ -23,6 +25,7 @@ export default function Toolbar({
       </button>
 
       <button
+        type="button"
         className={tool === "text" ? "active" : ""}
         onClick={() => setTool("text")}
       >
