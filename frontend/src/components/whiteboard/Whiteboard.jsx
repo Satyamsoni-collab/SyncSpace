@@ -95,27 +95,18 @@ function Whiteboard() {
 
 
     setShapes((previousShapes) => {
+      const updatedShapes = [...previousShapes];
+      const lastIndex = updatedShapes.length - 1;
+      const lastShape = updatedShapes[lastIndex];
 
-      const updatedShapes = [
-        ...previousShapes
-      ];
-
-
-      const lastShape =
-        updatedShapes[updatedShapes.length - 1];
-
-
-      if (!lastShape) {
+      if (!lastShape || lastShape.type !== "line" || !Array.isArray(lastShape.points)) {
         return previousShapes;
       }
 
-
-      lastShape.points = [
-        ...lastShape.points,
-        position.x,
-        position.y
-      ];
-
+      updatedShapes[lastIndex] = {
+        ...lastShape,
+        points: [...lastShape.points, position.x, position.y]
+      };
 
       return updatedShapes;
 
