@@ -213,11 +213,10 @@ function Whiteboard() {
   };
 
 
-  // Clear canvas
   const clearCanvas = () => {
-
     setShapes([]);
-
+    setIsDrawing(false);
+    setStartPoint(null);
   };
 
 
