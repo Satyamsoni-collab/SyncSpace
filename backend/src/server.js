@@ -1,39 +1,237 @@
-import express from 'express';
-import { createServer } from 'http';
-import { Server } from 'socket.io';
-import cors from 'cors';
-import dotenv from 'dotenv';
-import { socketHandler } from './socket/socketHandler.js';
-
-// Load environment variables
-dotenv.config();
+import express from "express";
+import http from "http";
+import cors from "cors";
+import { Server } from "socket.io";
 
 const app = express();
-const httpServer = createServer(app);
 
-// Configure CORS for Express
-app.use(cors({
-  origin: '*', // Allow all origins for now, update for production
-}));
+app.use(
+  cors({
+    origin: "http://localhost:5173"
+  })
+);
 
-// Configure Socket.io with CORS allowing all origins
-const io = new Server(httpServer, {
+app.use(express.json());
+
+const server = http.createServer(app);
+
+const io = new Server(server, {
   cors: {
-    origin: '*',
-    methods: ['GET', 'POST']
+    origin: "http://localhost:5173",
+    methods: ["GET", "POST"]
   }
 });
 
-// Initialize socket handlers
-socketHandler(io);
 
-// Basic health check route
-app.get('/', (req, res) => {
-  res.status(200).json({ status: 'OK', message: 'SyncSpace server is running.' });
+const PORT = 5000;
+
+
+/*
+  Store active users.
+
+  Structure:
+
+  roomId -> Map of socketId -> user information
+*/
+const rooms = new Map();
+
+
+app.get("/", (req, res) => {
+  res.json({
+    message: "SyncSpace Socket.io server is running"
+  });
 });
 
-const PORT = process.env.PORT || 5000;
 
-httpServer.listen(PORT, () => {
-  console.log(`Server is running on port ${PORT}`);
+io.on("connection", (socket) => {
+
+  console.log("User connected:", socket.id);
+
+
+  /*
+    USER JOINS ROOM
+  */
+
+  socket.on("join-room", ({ roomId, userName }) => {
+
+    if (!roomId) {
+      return;
+    }
+
+
+    socket.join(roomId);
+
+    socket.data.roomId = roomId;
+
+    socket.data.userName =
+      userName || `User-${socket.id.substring(0, 5)}`;
+
+
+    if (!rooms.has(roomId)) {
+      rooms.set(roomId, new Map());
+    }
+
+
+    const roomUsers = rooms.get(roomId);
+
+
+    roomUsers.set(socket.id, {
+      id: socket.id,
+      name: socket.data.userName,
+      x: 0,
+      y: 0
+    });
+
+
+    /*
+      Send existing users to the new user
+    */
+
+    const existingUsers =
+      Array.from(roomUsers.values()).filter(
+        (user) => user.id !== socket.id
+      );
+
+
+    socket.emit("room-users", existingUsers);
+
+
+    /*
+      Tell everyone else that a new user joined
+    */
+
+    socket.to(roomId).emit("user-joined", {
+      id: socket.id,
+      name: socket.data.userName,
+      x: 0,
+      y: 0
+    });
+
+
+    console.log(
+      `${socket.data.userName} joined room ${roomId}`
+    );
+  });
+
+
+  /*
+    WHITEBOARD DRAWING EVENT
+  */
+
+  socket.on("whiteboard-draw", ({ roomId, shape }) => {
+
+    if (!roomId || !shape) {
+      return;
+    }
+
+
+    /*
+      Send drawing to everyone except sender
+    */
+
+    socket.to(roomId).emit("whiteboard-draw", {
+      shape
+    });
+  });
+
+
+  /*
+    CLEAR WHITEBOARD
+  */
+
+  socket.on("whiteboard-clear", ({ roomId }) => {
+
+    if (!roomId) {
+      return;
+    }
+
+
+    socket.to(roomId).emit("whiteboard-clear");
+  });
+
+
+  /*
+    CURSOR MOVEMENT
+  */
+
+  socket.on("cursor-move", ({ roomId, x, y }) => {
+
+    if (!roomId) {
+      return;
+    }
+
+
+    const roomUsers = rooms.get(roomId);
+
+    if (roomUsers && roomUsers.has(socket.id)) {
+
+      const user = roomUsers.get(socket.id);
+
+      user.x = x;
+      user.y = y;
+    }
+
+
+    socket.to(roomId).emit("cursor-move", {
+      id: socket.id,
+      name: socket.data.userName,
+      x,
+      y
+    });
+  });
+
+
+  /*
+    USER DISCONNECT
+  */
+
+  socket.on("disconnect", () => {
+
+    const roomId = socket.data.roomId;
+
+
+    if (!roomId) {
+      return;
+    }
+
+
+    const roomUsers = rooms.get(roomId);
+
+
+    if (roomUsers) {
+
+      roomUsers.delete(socket.id);
+
+
+      socket.to(roomId).emit(
+        "user-left",
+        {
+          id: socket.id
+        }
+      );
+
+
+      if (roomUsers.size === 0) {
+
+        rooms.delete(roomId);
+
+      }
+    }
+
+
+    console.log(
+      "User disconnected:",
+      socket.id
+    );
+  });
+
+});
+
+
+server.listen(PORT, () => {
+
+  console.log(
+    `SyncSpace backend running on http://localhost:${PORT}`
+  );
+
 });

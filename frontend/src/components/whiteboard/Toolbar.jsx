@@ -1,50 +1,93 @@
-export default function Toolbar({
+function Toolbar({
   tool,
   setTool,
   color,
   setColor,
-  clearCanvas
+  clearCanvas,
+  connectedUsers
 }) {
+
   return (
+
     <div className="toolbar">
 
       <button
-        type="button"
-        className={tool === "pen" ? "active" : ""}
-        onClick={() => setTool("pen")}
+        className={
+          tool === "pen"
+            ? "active"
+            : ""
+        }
+        onClick={() =>
+          setTool("pen")
+        }
       >
         ✏️ Pen
       </button>
 
+
       <button
-        type="button"
-        className={tool === "rectangle" ? "active" : ""}
-        onClick={() => setTool("rectangle")}
+        className={
+          tool === "rectangle"
+            ? "active"
+            : ""
+        }
+        onClick={() =>
+          setTool("rectangle")
+        }
       >
         ▭ Rectangle
       </button>
 
+
       <button
-        type="button"
-        className={tool === "text" ? "active" : ""}
-        onClick={() => setTool("text")}
+        className={
+          tool === "text"
+            ? "active"
+            : ""
+        }
+        onClick={() =>
+          setTool("text")
+        }
       >
         T Text
       </button>
 
+
       <label>
+
         Color:
+
         <input
           type="color"
           value={color}
-          onChange={(event) => setColor(event.target.value)}
+          onChange={(event) =>
+            setColor(
+              event.target.value
+            )
+          }
         />
+
       </label>
 
-      <button onClick={clearCanvas}>
+
+      <button
+        onClick={clearCanvas}
+      >
         🗑 Clear
       </button>
 
+
+      <div className="user-count">
+
+        👥 Users: {connectedUsers}
+
+      </div>
+
     </div>
+
   );
+
 }
+
+
+export default Toolbar;
