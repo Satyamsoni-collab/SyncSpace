@@ -8,10 +8,13 @@
     "start": "node src/server.js"
   },
   "dependencies": {
+    "@y/websocket-server": "^0.1.5",
     "cors": "^2.8.5",
     "dotenv": "^16.4.5",
     "express": "^4.19.2",
-    "socket.io": "^4.7.5"
+    "socket.io": "^4.7.5",
+    "y-websocket": "^3.1.0",
+    "yjs": "^13.6.32"
   },
   "devDependencies": {
     "nodemon": "^3.1.4"
