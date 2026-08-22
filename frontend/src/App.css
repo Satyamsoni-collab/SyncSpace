@@ -1,0 +1,144 @@
+/* Reset & Base Styles */
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  background-color: #1e1e1e; /* Dark theme base */
+  color: #ffffff;
+}
+
+/* Layout Container */
+.app-shell {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  width: 100vw;
+  overflow: hidden; /* Prevents whole-page scrolling */
+}
+
+/* --- Navigation Bar --- */
+.top-nav {
+  height: 60px;
+  background-color: #252526;
+  border-bottom: 1px solid #333;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 24px;
+  flex-shrink: 0;
+}
+
+.logo h1 {
+  font-size: 1.4rem;
+  font-weight: 700;
+  color: #61dafb; /* React blue accent */
+  letter-spacing: 0.5px;
+}
+
+.nav-actions {
+  display: flex;
+  gap: 12px;
+}
+
+.btn {
+  padding: 8px 16px;
+  font-size: 0.9rem;
+  font-weight: 500;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn.outline {
+  background-color: transparent;
+  color: #d4d4d4;
+  border: 1px solid #555;
+}
+
+.btn.outline:hover {
+  background-color: #333;
+  color: #fff;
+}
+
+.btn.primary {
+  background-color: #007acc; /* VS Code blue */
+  color: white;
+  border: none;
+}
+
+.btn.primary:hover {
+  background-color: #005f9e;
+}
+
+/* --- Split Workspace --- */
+.workspace {
+  display: flex;
+  flex: 1;
+  overflow: hidden;
+}
+
+.workspace-panel {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-width: 300px; /* Prevents panels from crushing too small */
+}
+
+.divider {
+  width: 4px;
+  background-color: #333;
+  cursor: col-resize;
+  transition: background-color 0.2s ease;
+  z-index: 10;
+}
+
+.divider:hover {
+  background-color: #007acc;
+}
+
+/* --- Placeholders --- */
+.placeholder-container {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  margin: 16px;
+  border: 2px dashed #444;
+  border-radius: 8px;
+  color: #888;
+}
+
+.whiteboard-container {
+  background-color: #2d2d2d;
+}
+
+.editor-container {
+  background-color: #1e1e1e;
+}
+
+.placeholder-container h3 {
+  margin-bottom: 8px;
+  color: #cccccc;
+}
+
+/* --- Responsive Design (Tablets & Mobile) --- */
+@media (max-width: 768px) {
+  .workspace {
+    flex-direction: column;
+  }
+  
+  .divider {
+    width: 100%;
+    height: 4px;
+    cursor: row-resize;
+  }
+  
+  .workspace-panel {
+    min-height: 300px;
+  }
+}
