@@ -1,56 +1,109 @@
-import React from 'react';
-import './App.css';
+import React from "react";
 
-// --- Placeholders (Swap these out with your real imports later) ---
-const WhiteboardPlaceholder = () => (
-  <div className="placeholder-container whiteboard-container">
-    <h3>🎨 Whiteboard Component</h3>
-    <p>Waiting for canvas to mount...</p>
-  </div>
-);
+import "./App.css";
 
-const CodeEditorPlaceholder = () => (
-  <div className="placeholder-container editor-container">
-    <h3>💻 Code Editor Component</h3>
-    <p>Waiting for Monaco Editor to mount...</p>
-  </div>
-);
-// ------------------------------------------------------------------
+import Whiteboard from
+  "./components/whiteboard/Whiteboard";
+
+import CodeEditor from
+  "./components/editor/CodeEditor";
+
 
 function App() {
+
   return (
+
     <div className="app-shell">
-      
-      {/* 1. Top Navigation Bar */}
+
       <nav className="top-nav">
-        <div className="logo">
+
+        <div className="brand">
+
           <h1>SyncSpace</h1>
+
+          <p>
+            Real-Time Collaborative Workspace
+          </p>
+
         </div>
+
+
+        <div className="nav-center">
+
+          <span className="live-dot"></span>
+
+          <span>
+            Live Collaboration
+          </span>
+
+        </div>
+
+
         <div className="nav-actions">
-          <button className="btn outline">Share</button>
-          <button className="btn primary">Export</button>
+
+          <button
+            className="btn outline"
+          >
+            Share Room
+          </button>
+
+          <button
+            className="btn primary"
+          >
+            Export
+          </button>
+
         </div>
+
       </nav>
 
-      {/* 2. Main Workspace (Split Screen) */}
+
       <main className="workspace">
-        
-        {/* Left Side: Whiteboard */}
-        <section className="workspace-panel left-panel">
-          <WhiteboardPlaceholder />
+
+        <section
+          className="workspace-panel left-panel"
+        >
+
+          <div className="panel-title">
+
+            <div>
+
+              <h2>
+                Collaborative Whiteboard
+              </h2>
+
+              <p>
+                Draw and brainstorm together
+              </p>
+
+            </div>
+
+          </div>
+
+
+          <Whiteboard />
+
         </section>
 
-        {/* Visual Divider */}
+
         <div className="divider"></div>
 
-        {/* Right Side: Monaco Code Editor */}
-        <section className="workspace-panel right-panel">
-          <CodeEditorPlaceholder />
+
+        <section
+          className="workspace-panel right-panel"
+        >
+
+          <CodeEditor />
+
         </section>
 
       </main>
+
     </div>
+
   );
+
 }
+
 
 export default App;
