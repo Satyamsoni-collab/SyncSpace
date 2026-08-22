@@ -22,34 +22,25 @@ const io = new Server(server, {
   }
 });
 
-
 const PORT = 5000;
 
-
 /*
-  Store active users.
-
-  Structure:
-
-  roomId -> Map of socketId -> user information
+  roomId -> Map(socketId -> user)
 */
 const rooms = new Map();
 
-
 app.get("/", (req, res) => {
   res.json({
-    message: "SyncSpace Socket.io server is running"
+    message: "SyncSpace backend is running"
   });
 });
-
 
 io.on("connection", (socket) => {
 
   console.log("User connected:", socket.id);
 
-
   /*
-    USER JOINS ROOM
+    JOIN ROOM
   */
 
   socket.on("join-room", ({ roomId, userName }) => {
@@ -58,127 +49,159 @@ io.on("connection", (socket) => {
       return;
     }
 
-
     socket.join(roomId);
 
     socket.data.roomId = roomId;
 
     socket.data.userName =
-      userName || `User-${socket.id.substring(0, 5)}`;
-
+      userName ||
+      `User-${socket.id.substring(0, 5)}`;
 
     if (!rooms.has(roomId)) {
       rooms.set(roomId, new Map());
     }
 
-
     const roomUsers = rooms.get(roomId);
 
-
-    roomUsers.set(socket.id, {
+    const user = {
       id: socket.id,
       name: socket.data.userName,
-      x: 0,
-      y: 0
-    });
+      x: null,
+      y: null
+    };
 
-
-    /*
-      Send existing users to the new user
-    */
-
-    const existingUsers =
-      Array.from(roomUsers.values()).filter(
-        (user) => user.id !== socket.id
-      );
-
-
-    socket.emit("room-users", existingUsers);
-
+    roomUsers.set(socket.id, user);
 
     /*
-      Tell everyone else that a new user joined
+      Send complete user list
+      to everyone in room
     */
 
-    socket.to(roomId).emit("user-joined", {
-      id: socket.id,
-      name: socket.data.userName,
-      x: 0,
-      y: 0
-    });
+    io.to(roomId).emit(
+      "room-users",
+      Array.from(roomUsers.values())
+    );
 
+    /*
+      Notify other users
+    */
+
+    socket.to(roomId).emit(
+      "user-joined",
+      user
+    );
 
     console.log(
       `${socket.data.userName} joined room ${roomId}`
     );
+
   });
 
 
   /*
-    WHITEBOARD DRAWING EVENT
+    WHITEBOARD DRAWING
   */
 
-  socket.on("whiteboard-draw", ({ roomId, shape }) => {
+  socket.on(
+    "whiteboard-draw",
+    ({ roomId, shape }) => {
 
-    if (!roomId || !shape) {
-      return;
+      if (!roomId || !shape) {
+        return;
+      }
+
+      socket.to(roomId).emit(
+        "whiteboard-draw",
+        { shape }
+      );
+
     }
-
-
-    /*
-      Send drawing to everyone except sender
-    */
-
-    socket.to(roomId).emit("whiteboard-draw", {
-      shape
-    });
-  });
+  );
 
 
   /*
     CLEAR WHITEBOARD
   */
 
-  socket.on("whiteboard-clear", ({ roomId }) => {
+  socket.on(
+    "whiteboard-clear",
+    ({ roomId }) => {
 
-    if (!roomId) {
-      return;
+      if (!roomId) {
+        return;
+      }
+
+      socket.to(roomId).emit(
+        "whiteboard-clear"
+      );
+
     }
-
-
-    socket.to(roomId).emit("whiteboard-clear");
-  });
+  );
 
 
   /*
     CURSOR MOVEMENT
   */
 
-  socket.on("cursor-move", ({ roomId, x, y }) => {
+  socket.on(
+    "cursor-move",
+    ({ roomId, x, y }) => {
 
-    if (!roomId) {
-      return;
+      if (!roomId) {
+        return;
+      }
+
+      const roomUsers = rooms.get(roomId);
+
+      if (
+        roomUsers &&
+        roomUsers.has(socket.id)
+      ) {
+
+        const user =
+          roomUsers.get(socket.id);
+
+        user.x = x;
+        user.y = y;
+
+      }
+
+      socket.to(roomId).emit(
+        "cursor-move",
+        {
+          id: socket.id,
+          name: socket.data.userName,
+          x,
+          y
+        }
+      );
+
     }
+  );
 
 
-    const roomUsers = rooms.get(roomId);
+  /*
+    REAL-TIME CODE EDITOR
+  */
 
-    if (roomUsers && roomUsers.has(socket.id)) {
+  socket.on(
+    "code-change",
+    ({ roomId, code, language }) => {
 
-      const user = roomUsers.get(socket.id);
+      if (!roomId) {
+        return;
+      }
 
-      user.x = x;
-      user.y = y;
+      socket.to(roomId).emit(
+        "code-change",
+        {
+          code,
+          language
+        }
+      );
+
     }
-
-
-    socket.to(roomId).emit("cursor-move", {
-      id: socket.id,
-      name: socket.data.userName,
-      x,
-      y
-    });
-  });
+  );
 
 
   /*
@@ -187,21 +210,28 @@ io.on("connection", (socket) => {
 
   socket.on("disconnect", () => {
 
-    const roomId = socket.data.roomId;
-
+    const roomId =
+      socket.data.roomId;
 
     if (!roomId) {
       return;
     }
 
-
-    const roomUsers = rooms.get(roomId);
-
+    const roomUsers =
+      rooms.get(roomId);
 
     if (roomUsers) {
 
       roomUsers.delete(socket.id);
 
+      /*
+        Send updated user count
+      */
+
+      io.to(roomId).emit(
+        "room-users",
+        Array.from(roomUsers.values())
+      );
 
       socket.to(roomId).emit(
         "user-left",
@@ -210,19 +240,17 @@ io.on("connection", (socket) => {
         }
       );
 
-
       if (roomUsers.size === 0) {
-
         rooms.delete(roomId);
-
       }
-    }
 
+    }
 
     console.log(
       "User disconnected:",
       socket.id
     );
+
   });
 
 });
