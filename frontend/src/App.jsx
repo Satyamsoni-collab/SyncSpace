@@ -1,30 +1,105 @@
 import React from "react";
 
-import {
-  SocketProvider
-} from "./context/SocketContext";
+import "./App.css";
 
-import Whiteboard from "./components/whiteboard/Whiteboard";
+import Whiteboard from
+  "./components/whiteboard/Whiteboard";
+
+import CodeEditor from
+  "./components/editor/CodeEditor";
 
 
 function App() {
 
   return (
 
-    <SocketProvider>
+    <div className="app-shell">
 
-      <div
-        style={{
-          width: "100vw",
-          height: "100vh"
-        }}
-      >
+      <nav className="top-nav">
 
-        <Whiteboard />
+        <div className="brand">
 
-      </div>
+          <h1>SyncSpace</h1>
 
-    </SocketProvider>
+          <p>
+            Real-Time Collaborative Workspace
+          </p>
+
+        </div>
+
+
+        <div className="nav-center">
+
+          <span className="live-dot"></span>
+
+          <span>
+            Live Collaboration
+          </span>
+
+        </div>
+
+
+        <div className="nav-actions">
+
+          <button
+            className="btn outline"
+          >
+            Share Room
+          </button>
+
+          <button
+            className="btn primary"
+          >
+            Export
+          </button>
+
+        </div>
+
+      </nav>
+
+
+      <main className="workspace">
+
+        <section
+          className="workspace-panel left-panel"
+        >
+
+          <div className="panel-title">
+
+            <div>
+
+              <h2>
+                Collaborative Whiteboard
+              </h2>
+
+              <p>
+                Draw and brainstorm together
+              </p>
+
+            </div>
+
+          </div>
+
+
+          <Whiteboard />
+
+        </section>
+
+
+        <div className="divider"></div>
+
+
+        <section
+          className="workspace-panel right-panel"
+        >
+
+          <CodeEditor />
+
+        </section>
+
+      </main>
+
+    </div>
 
   );
 

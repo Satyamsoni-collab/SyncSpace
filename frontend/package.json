@@ -9,13 +9,12 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@monaco-editor/react": "^4.7.0",
     "konva": "^10.3.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "react-konva": "^19.2.5",
-    "socket.io-client": "^4.8.3",
-    "y-websocket": "^3.1.0",
-    "yjs": "^13.6.32"
+    "socket.io-client": "^4.8.3"
   },
   "devDependencies": {
     "@vitejs/plugin-react": "^4.0.0",

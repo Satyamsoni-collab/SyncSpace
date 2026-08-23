@@ -7,26 +7,38 @@ import React, {
 
 import { io } from "socket.io-client";
 
+const SOCKET_URL =
+  "http://localhost:5000";
 
-const SOCKET_URL = "http://localhost:5000";
-
-
-const SocketContext = createContext(null);
-
-
-export const useSocket = () => {
-  return useContext(SocketContext);
-};
+const SocketContext =
+  createContext(null);
 
 
-export const SocketProvider = ({ children }) => {
+export function useSocket() {
 
-  const [socket, setSocket] = useState(null);
+  return useContext(
+    SocketContext
+  );
+
+}
+
+
+export function SocketProvider({
+  children
+}) {
+
+  const [socket, setSocket] =
+    useState(null);
 
 
   useEffect(() => {
 
-    const newSocket = io(SOCKET_URL);
+    const newSocket = io(
+      SOCKET_URL,
+      {
+        autoConnect: true
+      }
+    );
 
     setSocket(newSocket);
 
@@ -41,9 +53,15 @@ export const SocketProvider = ({ children }) => {
 
 
   return (
-    <SocketContext.Provider value={socket}>
+
+    <SocketContext.Provider
+      value={socket}
+    >
+
       {children}
+
     </SocketContext.Provider>
+
   );
 
-};
+}

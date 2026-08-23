@@ -11,75 +11,88 @@ function Toolbar({
 
     <div className="toolbar">
 
-      <button
-        className={
-          tool === "pen"
-            ? "active"
-            : ""
-        }
-        onClick={() =>
-          setTool("pen")
-        }
-      >
-        ✏️ Pen
-      </button>
+      <div className="tool-group">
 
-
-      <button
-        className={
-          tool === "rectangle"
-            ? "active"
-            : ""
-        }
-        onClick={() =>
-          setTool("rectangle")
-        }
-      >
-        ▭ Rectangle
-      </button>
-
-
-      <button
-        className={
-          tool === "text"
-            ? "active"
-            : ""
-        }
-        onClick={() =>
-          setTool("text")
-        }
-      >
-        T Text
-      </button>
-
-
-      <label>
-
-        Color:
-
-        <input
-          type="color"
-          value={color}
-          onChange={(event) =>
-            setColor(
-              event.target.value
-            )
+        <button
+          className={
+            tool === "pen"
+              ? "active"
+              : ""
           }
-        />
-
-      </label>
-
-
-      <button
-        onClick={clearCanvas}
-      >
-        🗑 Clear
-      </button>
+          onClick={() =>
+            setTool("pen")
+          }
+        >
+          ✏️ Pen
+        </button>
 
 
-      <div className="user-count">
+        <button
+          className={
+            tool === "rectangle"
+              ? "active"
+              : ""
+          }
+          onClick={() =>
+            setTool("rectangle")
+          }
+        >
+          ▭ Rectangle
+        </button>
 
-        👥 Users: {connectedUsers}
+
+        <button
+          className={
+            tool === "text"
+              ? "active"
+              : ""
+          }
+          onClick={() =>
+            setTool("text")
+          }
+        >
+          T Text
+        </button>
+
+      </div>
+
+
+      <div className="toolbar-actions">
+
+        <label className="color-picker">
+
+          <span>Color</span>
+
+          <input
+            type="color"
+            value={color}
+            onChange={(event) =>
+              setColor(
+                event.target.value
+              )
+            }
+          />
+
+        </label>
+
+
+        <button
+          className="clear-button"
+          onClick={clearCanvas}
+        >
+          🗑 Clear
+        </button>
+
+
+        <div className="user-count">
+
+          👥 {connectedUsers}
+          {" "}
+          {connectedUsers === 1
+            ? "User"
+            : "Users"}
+
+        </div>
 
       </div>
 

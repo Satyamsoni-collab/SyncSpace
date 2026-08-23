@@ -15,8 +15,9 @@ import {
 
 import Toolbar from "./Toolbar";
 
-import { useSocket } from "../../context/SocketContext";
-import { sharedState } from "../../yjs/yjsClient";
+import {
+  useSocket
+} from "../../context/SocketContext";
 
 import "./whiteboard.css";
 
@@ -27,83 +28,67 @@ function Whiteboard() {
 
   const stageRef = useRef(null);
 
-
-  const [roomId] = useState("syncspace-demo");
-
-
-  const [userName] = useState(() => {
-
-    const savedName =
-      localStorage.getItem("syncspace-user-name");
-
-    if (savedName) {
-      return savedName;
-    }
-
-    const newName =
-      `User-${Math.floor(Math.random() * 1000)}`;
-
-    localStorage.setItem(
-      "syncspace-user-name",
-      newName
-    );
-
-    return newName;
-
-  });
+  const containerRef = useRef(null);
 
 
-  const [tool, setTool] = useState("pen");
-
-  const [color, setColor] = useState("#000000");
-
-  const [shapes, setShapes] = useState([]);
-
-  const [isDrawing, setIsDrawing] = useState(false);
-
-  const [startPoint, setStartPoint] = useState(null);
-
-  const [users, setUsers] = useState([]);
+  const [roomId] =
+    useState("syncspace-demo");
 
 
-  /*
-  ========================================
-  YJS
-  ========================================
-  */
+  const [userName] =
+    useState(() => {
 
-  useEffect(() => {
+      const savedName =
+        localStorage.getItem(
+          "syncspace-user-name"
+        );
 
-    const loadShapesFromYjs = () => {
-
-      const savedShapes =
-        sharedState.get("shapes");
-
-      if (savedShapes) {
-        setShapes(savedShapes);
+      if (savedName) {
+        return savedName;
       }
 
-    };
+      const newName =
+        `User-${Math.floor(
+          Math.random() * 1000
+        )}`;
 
-    loadShapesFromYjs();
+      localStorage.setItem(
+        "syncspace-user-name",
+        newName
+      );
 
-    const handleYjsChange = () => {
-      loadShapesFromYjs();
-    };
+      return newName;
 
-    sharedState.observe(handleYjsChange);
+    });
 
-    return () => {
-      sharedState.unobserve(handleYjsChange);
-    };
 
-  }, []);
+  const [tool, setTool] =
+    useState("pen");
+
+  const [color, setColor] =
+    useState("#2563eb");
+
+  const [shapes, setShapes] =
+    useState([]);
+
+  const [users, setUsers] =
+    useState([]);
+
+  const [isDrawing, setIsDrawing] =
+    useState(false);
+
+  const [startPoint, setStartPoint] =
+    useState(null);
+
+  const [stageSize, setStageSize] =
+    useState({
+      width: 800,
+      height: 500
+    });
 
 
   /*
-  ========================================
-  SOCKET CONNECTION
-  ========================================
+    JOIN ROOM
   */
 
   useEffect(() => {
@@ -112,12 +97,8 @@ function Whiteboard() {
       return;
     }
 
-    const handleConnect = () => {
 
-      console.log(
-        "Connected to server:",
-        socket.id
-      );
+    const joinRoom = () => {
 
       socket.emit(
         "join-room",
@@ -131,12 +112,16 @@ function Whiteboard() {
 
 
     if (socket.connected) {
-      handleConnect();
+
+      joinRoom();
+
     } else {
+
       socket.on(
         "connect",
-        handleConnect
+        joinRoom
       );
+
     }
 
 
@@ -144,7 +129,7 @@ function Whiteboard() {
 
       socket.off(
         "connect",
-        handleConnect
+        joinRoom
       );
 
     };
@@ -157,9 +142,7 @@ function Whiteboard() {
 
 
   /*
-  ========================================
-  ROOM USERS
-  ========================================
+    USER LIST
   */
 
   useEffect(() => {
@@ -172,11 +155,6 @@ function Whiteboard() {
     const handleRoomUsers =
       (roomUsers) => {
 
-        console.log(
-          "Room users:",
-          roomUsers
-        );
-
         setUsers(
           Array.isArray(roomUsers)
             ? roomUsers
@@ -187,59 +165,28 @@ function Whiteboard() {
 
 
     const handleUserJoined =
-      ({ user }) => {
+      (user) => {
 
         if (!user) {
           return;
         }
 
-
         setUsers(
           (previousUsers) => {
 
-            const newUserId =
-              user.socketId ||
-              user.id;
-
-
             const exists =
               previousUsers.some(
-                (item) => {
-
-                  if (!item) {
-                    return false;
-                  }
-
-                  const itemId =
-                    item.socketId ||
-                    item.id;
-
-                  return itemId === newUserId;
-
-                }
+                (item) =>
+                  item.id === user.id
               );
-
 
             if (exists) {
               return previousUsers;
             }
 
-
             return [
               ...previousUsers,
-              {
-                ...user,
-
-                x:
-                  typeof user.x === "number"
-                    ? user.x
-                    : undefined,
-
-                y:
-                  typeof user.y === "number"
-                    ? user.y
-                    : undefined
-              }
+              user
             ];
 
           }
@@ -248,41 +195,15 @@ function Whiteboard() {
       };
 
 
-    const handleUserDisconnected =
-      ({ user }) => {
-
-        if (!user) {
-          return;
-        }
-
-
-        const disconnectedId =
-          user.socketId ||
-          user.id;
-
+    const handleUserLeft =
+      ({ id }) => {
 
         setUsers(
-          (previousUsers) => {
-
-            return previousUsers.filter(
-              (item) => {
-
-                if (!item) {
-                  return false;
-                }
-
-
-                const itemId =
-                  item.socketId ||
-                  item.id;
-
-
-                return itemId !== disconnectedId;
-
-              }
-            );
-
-          }
+          (previousUsers) =>
+            previousUsers.filter(
+              (user) =>
+                user.id !== id
+            )
         );
 
       };
@@ -299,8 +220,8 @@ function Whiteboard() {
     );
 
     socket.on(
-      "user-disconnected",
-      handleUserDisconnected
+      "user-left",
+      handleUserLeft
     );
 
 
@@ -317,8 +238,8 @@ function Whiteboard() {
       );
 
       socket.off(
-        "user-disconnected",
-        handleUserDisconnected
+        "user-left",
+        handleUserLeft
       );
 
     };
@@ -327,9 +248,7 @@ function Whiteboard() {
 
 
   /*
-  ========================================
-  REMOTE DRAWING
-  ========================================
+    REMOTE DRAWING
   */
 
   useEffect(() => {
@@ -346,36 +265,23 @@ function Whiteboard() {
           return;
         }
 
-
         setShapes(
           (previousShapes) => {
 
-            const alreadyExists =
+            const exists =
               previousShapes.some(
                 (item) =>
-                  item &&
                   item.id === shape.id
               );
 
-
-            if (alreadyExists) {
+            if (exists) {
               return previousShapes;
             }
 
-
-            const updatedShapes = [
+            return [
               ...previousShapes,
               shape
             ];
-
-
-            sharedState.set(
-              "shapes",
-              updatedShapes
-            );
-
-
-            return updatedShapes;
 
           }
         );
@@ -402,9 +308,7 @@ function Whiteboard() {
 
 
   /*
-  ========================================
-  REMOTE CLEAR
-  ========================================
+    REMOTE CLEAR
   */
 
   useEffect(() => {
@@ -417,11 +321,6 @@ function Whiteboard() {
     const handleRemoteClear = () => {
 
       setShapes([]);
-
-      sharedState.set(
-        "shapes",
-        []
-      );
 
     };
 
@@ -445,9 +344,7 @@ function Whiteboard() {
 
 
   /*
-  ========================================
-  REMOTE CURSOR
-  ========================================
+    REMOTE CURSOR
   */
 
   useEffect(() => {
@@ -458,85 +355,35 @@ function Whiteboard() {
 
 
     const handleCursorMove =
-      (cursorData) => {
-
-        if (!cursorData) {
-          return;
-        }
-
-
-        const cursorId =
-          cursorData.id;
-
-
-        if (!cursorId) {
-          return;
-        }
-
-
-        /*
-        Don't update our own cursor
-        */
-
-        if (
-          socket.id === cursorId
-        ) {
-          return;
-        }
-
+      ({
+        id,
+        name,
+        x,
+        y
+      }) => {
 
         setUsers(
-          (previousUsers) => {
-
-            return previousUsers.map(
+          (previousUsers) =>
+            previousUsers.map(
               (user) => {
 
-                if (!user) {
-                  return user;
-                }
-
-
-                const userId =
-                  user.socketId ||
-                  user.id;
-
-
                 if (
-                  userId === cursorId
+                  user.id === id
                 ) {
 
                   return {
                     ...user,
-
-                    socketId:
-                      cursorId,
-
-                    id:
-                      cursorId,
-
-                    x:
-                      cursorData.x,
-
-                    y:
-                      cursorData.y,
-
-                    userName:
-                      cursorData.name ||
-                      user.userName ||
-                      user.name ||
-                      "User"
-
+                    name,
+                    x,
+                    y
                   };
 
                 }
 
-
                 return user;
 
               }
-            );
-
-          }
+            )
         );
 
       };
@@ -561,17 +408,58 @@ function Whiteboard() {
 
 
   /*
-  ========================================
-  POINTER POSITION
-  ========================================
+    RESPONSIVE CANVAS
   */
+
+  useEffect(() => {
+
+    const updateSize = () => {
+
+      if (!containerRef.current) {
+        return;
+      }
+
+      setStageSize({
+
+        width:
+          containerRef.current
+            .clientWidth,
+
+        height:
+          containerRef.current
+            .clientHeight
+
+      });
+
+    };
+
+
+    updateSize();
+
+
+    window.addEventListener(
+      "resize",
+      updateSize
+    );
+
+
+    return () => {
+
+      window.removeEventListener(
+        "resize",
+        updateSize
+      );
+
+    };
+
+  }, []);
+
 
   function getPointerPosition() {
 
     if (!stageRef.current) {
       return null;
     }
-
 
     return stageRef.current
       .getPointerPosition();
@@ -580,9 +468,7 @@ function Whiteboard() {
 
 
   /*
-  ========================================
-  MOUSE DOWN
-  ========================================
+    MOUSE DOWN
   */
 
   function handleMouseDown() {
@@ -590,20 +476,14 @@ function Whiteboard() {
     const position =
       getPointerPosition();
 
-
     if (!position) {
       return;
     }
 
 
-    /*
-    PEN
-    */
-
     if (tool === "pen") {
 
       setIsDrawing(true);
-
 
       const newLine = {
 
@@ -631,15 +511,10 @@ function Whiteboard() {
         ]
       );
 
-
       return;
 
     }
 
-
-    /*
-    RECTANGLE / TEXT
-    */
 
     setStartPoint(position);
 
@@ -647,9 +522,7 @@ function Whiteboard() {
 
 
   /*
-  ========================================
-  MOUSE MOVE
-  ========================================
+    MOUSE MOVE
   */
 
   function handleMouseMove() {
@@ -657,36 +530,23 @@ function Whiteboard() {
     const position =
       getPointerPosition();
 
-
     if (!position) {
       return;
     }
 
 
     /*
-    ========================================
-    SEND OUR CURSOR
-    ========================================
+      SEND CURSOR
     */
 
-    if (socket) {
+    if (socket?.connected) {
 
       socket.emit(
         "cursor-move",
         {
           roomId,
-
-          id:
-            socket.id,
-
-          name:
-            userName,
-
-          x:
-            position.x,
-
-          y:
-            position.y
+          x: position.x,
+          y: position.y
         }
       );
 
@@ -694,12 +554,13 @@ function Whiteboard() {
 
 
     /*
-    ========================================
-    PEN DRAWING
-    ========================================
+      PEN DRAWING
     */
 
-    if (!isDrawing) {
+    if (
+      !isDrawing ||
+      tool !== "pen"
+    ) {
       return;
     }
 
@@ -717,10 +578,8 @@ function Whiteboard() {
         const updatedShapes =
           [...previousShapes];
 
-
         const lastIndex =
           updatedShapes.length - 1;
-
 
         const lastShape =
           updatedShapes[lastIndex];
@@ -730,9 +589,7 @@ function Whiteboard() {
           !lastShape ||
           lastShape.type !== "line"
         ) {
-
           return previousShapes;
-
         }
 
 
@@ -742,9 +599,7 @@ function Whiteboard() {
 
           points: [
             ...lastShape.points,
-
             position.x,
-
             position.y
           ]
 
@@ -760,16 +615,10 @@ function Whiteboard() {
 
 
   /*
-  ========================================
-  MOUSE UP
-  ========================================
+    MOUSE UP
   */
 
   function handleMouseUp() {
-
-    /*
-    PEN
-    */
 
     if (tool === "pen") {
 
@@ -779,41 +628,25 @@ function Whiteboard() {
       setShapes(
         (currentShapes) => {
 
-          if (
-            currentShapes.length === 0
-          ) {
-
-            return currentShapes;
-
-          }
-
-
           const lastShape =
             currentShapes[
               currentShapes.length - 1
             ];
 
-
-          if (socket) {
+          if (
+            socket?.connected &&
+            lastShape
+          ) {
 
             socket.emit(
               "whiteboard-draw",
               {
                 roomId,
-
-                shape:
-                  lastShape
+                shape: lastShape
               }
             );
 
           }
-
-
-          sharedState.set(
-            "shapes",
-            [...currentShapes]
-          );
-
 
           return currentShapes;
 
@@ -826,13 +659,8 @@ function Whiteboard() {
     }
 
 
-    /*
-    END POSITION
-    */
-
     const position =
       getPointerPosition();
-
 
     if (
       !position ||
@@ -847,9 +675,7 @@ function Whiteboard() {
 
 
     /*
-    ========================================
-    RECTANGLE
-    ========================================
+      RECTANGLE
     */
 
     if (
@@ -861,8 +687,7 @@ function Whiteboard() {
         id:
           `${socket?.id}-${Date.now()}-${Math.random()}`,
 
-        type:
-          "rectangle",
+        type: "rectangle",
 
         x:
           Math.min(
@@ -888,57 +713,34 @@ function Whiteboard() {
             startPoint.y
           ),
 
-        stroke:
-          color,
+        stroke: color,
 
-        strokeWidth:
-          2
+        strokeWidth: 3
 
       };
 
 
       setShapes(
-        (previousShapes) => {
-
-          const updatedShapes = [
-            ...previousShapes,
-            rectangle
-          ];
-
-
-          sharedState.set(
-            "shapes",
-            updatedShapes
-          );
-
-
-          return updatedShapes;
-
-        }
+        (previousShapes) => [
+          ...previousShapes,
+          rectangle
+        ]
       );
 
 
-      if (socket) {
-
-        socket.emit(
-          "whiteboard-draw",
-          {
-            roomId,
-
-            shape:
-              rectangle
-          }
-        );
-
-      }
+      socket?.emit(
+        "whiteboard-draw",
+        {
+          roomId,
+          shape: rectangle
+        }
+      );
 
     }
 
 
     /*
-    ========================================
-    TEXT
-    ========================================
+      TEXT
     */
 
     if (
@@ -947,7 +749,7 @@ function Whiteboard() {
 
       const textValue =
         window.prompt(
-          "Enter text"
+          "Enter your text"
         );
 
 
@@ -961,61 +763,37 @@ function Whiteboard() {
           id:
             `${socket?.id}-${Date.now()}-${Math.random()}`,
 
-          type:
-            "text",
+          type: "text",
 
-          x:
-            startPoint.x,
+          x: startPoint.x,
 
-          y:
-            startPoint.y,
+          y: startPoint.y,
 
           text:
             textValue.trim(),
 
-          fill:
-            color,
+          fill: color,
 
-          fontSize:
-            20
+          fontSize: 22
 
         };
 
 
         setShapes(
-          (previousShapes) => {
-
-            const updatedShapes = [
-              ...previousShapes,
-              textShape
-            ];
-
-
-            sharedState.set(
-              "shapes",
-              updatedShapes
-            );
-
-
-            return updatedShapes;
-
-          }
+          (previousShapes) => [
+            ...previousShapes,
+            textShape
+          ]
         );
 
 
-        if (socket) {
-
-          socket.emit(
-            "whiteboard-draw",
-            {
-              roomId,
-
-              shape:
-                textShape
-            }
-          );
-
-        }
+        socket?.emit(
+          "whiteboard-draw",
+          {
+            roomId,
+            shape: textShape
+          }
+        );
 
       }
 
@@ -1028,50 +806,23 @@ function Whiteboard() {
 
 
   /*
-  ========================================
-  CLEAR CANVAS
-  ========================================
+    CLEAR
   */
 
   function clearCanvas() {
 
     setShapes([]);
 
-    sharedState.set(
-      "shapes",
-      []
+
+    socket?.emit(
+      "whiteboard-clear",
+      {
+        roomId
+      }
     );
-
-
-    if (socket) {
-
-      socket.emit(
-        "whiteboard-clear",
-        {
-          roomId
-        }
-      );
-
-    }
 
   }
 
-
-  /*
-  ========================================
-  CONNECTED USERS
-  ========================================
-  */
-
-  const connectedUsers =
-    users.length;
-
-
-  /*
-  ========================================
-  RENDER
-  ========================================
-  */
 
   return (
 
@@ -1090,24 +841,27 @@ function Whiteboard() {
         clearCanvas={clearCanvas}
 
         connectedUsers={
-          connectedUsers
+          users.length
         }
 
       />
 
 
-      <div className="canvas-container">
+      <div
+        className="canvas-container"
+        ref={containerRef}
+      >
 
         <Stage
 
           ref={stageRef}
 
           width={
-            window.innerWidth
+            stageSize.width
           }
 
           height={
-            window.innerHeight - 60
+            stageSize.height
           }
 
           onMouseDown={
@@ -1126,10 +880,8 @@ function Whiteboard() {
 
           <Layer>
 
-            {/* DRAWING */}
-
             {shapes.map(
-              (shape, index) => {
+              (shape) => {
 
                 if (
                   shape.type === "line"
@@ -1139,9 +891,7 @@ function Whiteboard() {
 
                     <Line
 
-                      key={
-                        `shape-line-${shape.id}-${index}`
-                      }
+                      key={shape.id}
 
                       points={
                         shape.points
@@ -1167,24 +917,19 @@ function Whiteboard() {
 
 
                 if (
-                  shape.type === "rectangle"
+                  shape.type ===
+                  "rectangle"
                 ) {
 
                   return (
 
                     <Rect
 
-                      key={
-                        `shape-rect-${shape.id}-${index}`
-                      }
+                      key={shape.id}
 
-                      x={
-                        shape.x
-                      }
+                      x={shape.x}
 
-                      y={
-                        shape.y
-                      }
+                      y={shape.y}
 
                       width={
                         shape.width
@@ -1202,6 +947,8 @@ function Whiteboard() {
                         shape.strokeWidth
                       }
 
+                      cornerRadius={4}
+
                     />
 
                   );
@@ -1217,17 +964,11 @@ function Whiteboard() {
 
                     <Text
 
-                      key={
-                        `shape-text-${shape.id}-${index}`
-                      }
+                      key={shape.id}
 
-                      x={
-                        shape.x
-                      }
+                      x={shape.x}
 
-                      y={
-                        shape.y
-                      }
+                      y={shape.y}
 
                       text={
                         shape.text
@@ -1254,107 +995,54 @@ function Whiteboard() {
             )}
 
 
-            {/* ========================================
-                REMOTE CURSORS
-            ======================================== */}
-
             {users.map(
-              (user, index) => {
-
-                if (!user) {
-                  return null;
-                }
-
-
-                const userId =
-                  user.socketId ||
-                  user.id;
-
-
-                /*
-                Don't show our own cursor
-                */
+              (user) => {
 
                 if (
-                  userId === socket?.id
+                  user.id === socket?.id ||
+                  user.x === null ||
+                  user.y === null
                 ) {
-
                   return null;
-
                 }
-
-
-                const x =
-                  typeof user.x === "number"
-                    ? user.x
-                    : null;
-
-
-                const y =
-                  typeof user.y === "number"
-                    ? user.y
-                    : null;
-
-
-                if (
-                  x === null ||
-                  y === null
-                ) {
-
-                  return null;
-
-                }
-
-
-                const userKey =
-                  userId ||
-                  `remote-user-${index}`;
 
 
                 return (
 
                   <React.Fragment
-                    key={
-                      `cursor-${userKey}`
-                    }
+                    key={user.id}
                   >
-
-                    {/* BLUE DOT */}
 
                     <Circle
 
-                      x={x}
+                      x={user.x}
 
-                      y={y}
+                      y={user.y}
 
-                      radius={7}
+                      radius={6}
 
-                      fill="blue"
+                      fill="#2563eb"
 
                     />
 
 
-                    {/* USER NAME */}
-
                     <Text
 
                       x={
-                        x + 12
+                        user.x + 10
                       }
 
                       y={
-                        y - 10
+                        user.y - 20
                       }
 
                       text={
-                        user.userName ||
-                        user.name ||
-                        "User"
+                        user.name
                       }
 
-                      fontSize={14}
+                      fontSize={13}
 
-                      fill="blue"
+                      fill="#1e40af"
 
                     />
 
