@@ -5,11 +5,10 @@ import { Server } from "socket.io";
 
 const app = express();
 
-app.use(
-  cors({
-    origin: "http://localhost:5173"
-  })
-);
+app.use(cors({
+  origin: "http://localhost:5173",
+  methods: ["GET", "POST"]
+}));
 
 app.use(express.json());
 
@@ -24,20 +23,34 @@ const io = new Server(server, {
 
 const PORT = 5000;
 
+
 /*
-  roomId -> Map(socketId -> user)
+  ROOM STRUCTURE
+
+  roomId -> {
+    users: Map,
+    code: "",
+    language: "javascript"
+  }
 */
+
 const rooms = new Map();
 
+
 app.get("/", (req, res) => {
+
   res.json({
-    message: "SyncSpace backend is running"
+    status: "online",
+    message: "SyncSpace server is running"
   });
+
 });
+
 
 io.on("connection", (socket) => {
 
   console.log("User connected:", socket.id);
+
 
   /*
     JOIN ROOM
@@ -49,50 +62,90 @@ io.on("connection", (socket) => {
       return;
     }
 
+
     socket.join(roomId);
 
     socket.data.roomId = roomId;
 
     socket.data.userName =
-      userName ||
-      `User-${socket.id.substring(0, 5)}`;
+      userName || "Guest";
+
 
     if (!rooms.has(roomId)) {
-      rooms.set(roomId, new Map());
+
+      rooms.set(roomId, {
+        users: new Map(),
+
+        code:
+`// Start collaborating here
+
+console.log("Hello from SyncSpace");`,
+
+        language: "javascript"
+      });
+
     }
 
-    const roomUsers = rooms.get(roomId);
 
-    const user = {
+    const room = rooms.get(roomId);
+
+
+    room.users.set(socket.id, {
       id: socket.id,
-      name: socket.data.userName,
-      x: null,
-      y: null
-    };
+      name: socket.data.userName
+    });
 
-    roomUsers.set(socket.id, user);
 
     /*
-      Send complete user list
-      to everyone in room
+      Send current editor state
+      to newly joined user
+    */
+
+    socket.emit("editor-state", {
+
+      code: room.code,
+
+      language: room.language
+
+    });
+
+
+    /*
+      Send all users to new user
+    */
+
+    socket.emit(
+      "room-users",
+      Array.from(room.users.values())
+    );
+
+
+    /*
+      Send updated count
+      to everyone
     */
 
     io.to(roomId).emit(
-      "room-users",
-      Array.from(roomUsers.values())
+      "user-count",
+      room.users.size
     );
 
+
     /*
-      Notify other users
+      Notify others
     */
 
     socket.to(roomId).emit(
       "user-joined",
-      user
+      {
+        id: socket.id,
+        name: socket.data.userName
+      }
     );
 
+
     console.log(
-      `${socket.data.userName} joined room ${roomId}`
+      `${socket.data.userName} joined ${roomId}`
     );
 
   });
@@ -110,9 +163,12 @@ io.on("connection", (socket) => {
         return;
       }
 
+
       socket.to(roomId).emit(
         "whiteboard-draw",
-        { shape }
+        {
+          shape
+        }
       );
 
     }
@@ -130,6 +186,7 @@ io.on("connection", (socket) => {
       if (!roomId) {
         return;
       }
+
 
       socket.to(roomId).emit(
         "whiteboard-clear"
@@ -151,20 +208,6 @@ io.on("connection", (socket) => {
         return;
       }
 
-      const roomUsers = rooms.get(roomId);
-
-      if (
-        roomUsers &&
-        roomUsers.has(socket.id)
-      ) {
-
-        const user =
-          roomUsers.get(socket.id);
-
-        user.x = x;
-        user.y = y;
-
-      }
 
       socket.to(roomId).emit(
         "cursor-move",
@@ -181,16 +224,37 @@ io.on("connection", (socket) => {
 
 
   /*
-    REAL-TIME CODE EDITOR
+    CODE CHANGE
+
+    Save the latest room state
+    and send it to everyone else.
   */
 
   socket.on(
     "code-change",
-    ({ roomId, code, language }) => {
+    ({
+      roomId,
+      code,
+      language
+    }) => {
 
       if (!roomId) {
         return;
       }
+
+
+      const room =
+        rooms.get(roomId);
+
+
+      if (!room) {
+        return;
+      }
+
+
+      room.code = code;
+      room.language = language;
+
 
       socket.to(roomId).emit(
         "code-change",
@@ -205,7 +269,7 @@ io.on("connection", (socket) => {
 
 
   /*
-    USER DISCONNECT
+    DISCONNECT
   */
 
   socket.on("disconnect", () => {
@@ -213,25 +277,29 @@ io.on("connection", (socket) => {
     const roomId =
       socket.data.roomId;
 
+
     if (!roomId) {
+
+      console.log(
+        "User disconnected:",
+        socket.id
+      );
+
       return;
+
     }
 
-    const roomUsers =
+
+    const room =
       rooms.get(roomId);
 
-    if (roomUsers) {
 
-      roomUsers.delete(socket.id);
+    if (room) {
 
-      /*
-        Send updated user count
-      */
-
-      io.to(roomId).emit(
-        "room-users",
-        Array.from(roomUsers.values())
+      room.users.delete(
+        socket.id
       );
+
 
       socket.to(roomId).emit(
         "user-left",
@@ -240,11 +308,29 @@ io.on("connection", (socket) => {
         }
       );
 
-      if (roomUsers.size === 0) {
-        rooms.delete(roomId);
+
+      io.to(roomId).emit(
+        "user-count",
+        room.users.size
+      );
+
+
+      if (room.users.size === 0) {
+
+        /*
+          We keep the room state for now.
+          This allows future users
+          to reconnect without server crash.
+        */
+
+        console.log(
+          `Room ${roomId} is now empty`
+        );
+
       }
 
     }
+
 
     console.log(
       "User disconnected:",
