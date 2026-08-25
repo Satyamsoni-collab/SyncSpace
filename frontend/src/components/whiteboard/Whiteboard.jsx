@@ -20,6 +20,8 @@ import {
   connectToServer
 } from "../../services/socket";
 
+import { sharedState } from "../../yjs/yjsClient";
+
 import "./whiteboard.css";
 
 
@@ -68,7 +70,53 @@ function Whiteboard({
 
 
   /*
-    Get canvas size
+    YJS STATE SYNCHRONIZATION
+  */
+
+  useEffect(() => {
+
+    const loadShapesFromYjs = () => {
+
+      const savedShapes =
+        sharedState.get("shapes");
+
+      if (Array.isArray(savedShapes)) {
+
+        setShapes(savedShapes);
+
+      }
+
+    };
+
+
+    loadShapesFromYjs();
+
+
+    const handleYjsChange = () => {
+
+      loadShapesFromYjs();
+
+    };
+
+
+    sharedState.observe(
+      handleYjsChange
+    );
+
+
+    return () => {
+
+      sharedState.unobserve(
+        handleYjsChange
+      );
+
+    };
+
+  }, []);
+
+
+  /*
+    JOIN ROOM
   */
 
   useEffect(() => {
@@ -398,9 +446,22 @@ function Whiteboard({
   const handleMouseDown =
     useCallback((event) => {
 
+            const updatedShapes = [
+              ...previousShapes,
+              shape
+            ];
 
-      const stage =
-        event.target.getStage();
+
+            sharedState.set(
+              "shapes",
+              updatedShapes
+            );
+
+
+            return updatedShapes;
+
+          }
+        );
 
 
       const pointer =
@@ -426,7 +487,13 @@ function Whiteboard({
           id:
             `${socket.id}-${Date.now()}`,
 
-          type: "pen",
+
+      sharedState.set(
+        "shapes",
+        []
+      );
+
+    };
 
           points: [
             pointer.x,
@@ -687,15 +754,25 @@ function Whiteboard({
                 }
 
 
+          if (
+            socket?.connected &&
+            lastShape
+          ) {
+
                 else if (
                   shape.type ===
                   "rectangle"
                 ) {
 
 
-                  shape.width =
-                    pointer.x -
-                    shape.x;
+
+          sharedState.set(
+            "shapes",
+            [...currentShapes]
+          );
+
+
+          return currentShapes;
 
 
                   shape.height =
@@ -748,6 +825,25 @@ function Whiteboard({
         return;
       }
 
+      setShapes(
+        (previousShapes) => {
+
+          const updatedShapes = [
+            ...previousShapes,
+            rectangle
+          ];
+
+
+          sharedState.set(
+            "shapes",
+            updatedShapes
+          );
+
+
+          return updatedShapes;
+
+        }
+      );
 
       drawingRef.current =
         false;
@@ -796,7 +892,25 @@ function Whiteboard({
     useCallback(() => {
 
 
-      setShapes([]);
+        setShapes(
+          (previousShapes) => {
+
+            const updatedShapes = [
+              ...previousShapes,
+              textShape
+            ];
+
+
+            sharedState.set(
+              "shapes",
+              updatedShapes
+            );
+
+
+            return updatedShapes;
+
+          }
+        );
 
 
       socket.emit(
@@ -823,8 +937,16 @@ function Whiteboard({
     (shape) => {
 
 
-      if (!shape) {
-        return null;
+    sharedState.set(
+      "shapes",
+      []
+    );
+
+
+    socket?.emit(
+      "whiteboard-clear",
+      {
+        roomId
       }
 
 
