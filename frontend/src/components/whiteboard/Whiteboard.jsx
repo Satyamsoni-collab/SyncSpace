@@ -19,6 +19,8 @@ import {
   useSocket
 } from "../../context/SocketContext";
 
+import { sharedState } from "../../yjs/yjsClient";
+
 import "./whiteboard.css";
 
 
@@ -85,6 +87,52 @@ function Whiteboard() {
       width: 800,
       height: 500
     });
+
+
+  /*
+    YJS STATE SYNCHRONIZATION
+  */
+
+  useEffect(() => {
+
+    const loadShapesFromYjs = () => {
+
+      const savedShapes =
+        sharedState.get("shapes");
+
+      if (Array.isArray(savedShapes)) {
+
+        setShapes(savedShapes);
+
+      }
+
+    };
+
+
+    loadShapesFromYjs();
+
+
+    const handleYjsChange = () => {
+
+      loadShapesFromYjs();
+
+    };
+
+
+    sharedState.observe(
+      handleYjsChange
+    );
+
+
+    return () => {
+
+      sharedState.unobserve(
+        handleYjsChange
+      );
+
+    };
+
+  }, []);
 
 
   /*
@@ -278,10 +326,19 @@ function Whiteboard() {
               return previousShapes;
             }
 
-            return [
+            const updatedShapes = [
               ...previousShapes,
               shape
             ];
+
+
+            sharedState.set(
+              "shapes",
+              updatedShapes
+            );
+
+
+            return updatedShapes;
 
           }
         );
@@ -321,6 +378,12 @@ function Whiteboard() {
     const handleRemoteClear = () => {
 
       setShapes([]);
+
+
+      sharedState.set(
+        "shapes",
+        []
+      );
 
     };
 
@@ -633,6 +696,7 @@ function Whiteboard() {
               currentShapes.length - 1
             ];
 
+
           if (
             socket?.connected &&
             lastShape
@@ -647,6 +711,13 @@ function Whiteboard() {
             );
 
           }
+
+
+          sharedState.set(
+            "shapes",
+            [...currentShapes]
+          );
+
 
           return currentShapes;
 
@@ -721,10 +792,23 @@ function Whiteboard() {
 
 
       setShapes(
-        (previousShapes) => [
-          ...previousShapes,
-          rectangle
-        ]
+        (previousShapes) => {
+
+          const updatedShapes = [
+            ...previousShapes,
+            rectangle
+          ];
+
+
+          sharedState.set(
+            "shapes",
+            updatedShapes
+          );
+
+
+          return updatedShapes;
+
+        }
       );
 
 
@@ -780,10 +864,23 @@ function Whiteboard() {
 
 
         setShapes(
-          (previousShapes) => [
-            ...previousShapes,
-            textShape
-          ]
+          (previousShapes) => {
+
+            const updatedShapes = [
+              ...previousShapes,
+              textShape
+            ];
+
+
+            sharedState.set(
+              "shapes",
+              updatedShapes
+            );
+
+
+            return updatedShapes;
+
+          }
         );
 
 
@@ -812,6 +909,12 @@ function Whiteboard() {
   function clearCanvas() {
 
     setShapes([]);
+
+
+    sharedState.set(
+      "shapes",
+      []
+    );
 
 
     socket?.emit(
