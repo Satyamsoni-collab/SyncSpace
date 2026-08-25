@@ -4,14 +4,17 @@ function Toolbar({
   color,
   setColor,
   clearCanvas,
-  connectedUsers
+  undoCanvas,
+  connectedUsers,
+  connected
 }) {
 
   return (
 
     <div className="toolbar">
 
-      <div className="tool-group">
+
+      <div className="toolbar-left">
 
         <button
           className={
@@ -23,7 +26,8 @@ function Toolbar({
             setTool("pen")
           }
         >
-          ✏️ Pen
+          ✏️
+          <span>Pen</span>
         </button>
 
 
@@ -37,7 +41,23 @@ function Toolbar({
             setTool("rectangle")
           }
         >
-          ▭ Rectangle
+          ▭
+          <span>Rectangle</span>
+        </button>
+
+
+        <button
+          className={
+            tool === "circle"
+              ? "active"
+              : ""
+          }
+          onClick={() =>
+            setTool("circle")
+          }
+        >
+          ⭕
+          <span>Circle</span>
         </button>
 
 
@@ -51,13 +71,15 @@ function Toolbar({
             setTool("text")
           }
         >
-          T Text
+          T
+          <span>Text</span>
         </button>
 
       </div>
 
 
-      <div className="toolbar-actions">
+
+      <div className="toolbar-center">
 
         <label className="color-picker">
 
@@ -75,6 +97,20 @@ function Toolbar({
 
         </label>
 
+      </div>
+
+
+
+      <div className="toolbar-right">
+
+
+        <button
+          className="action-button"
+          onClick={undoCanvas}
+        >
+          ↩ Undo
+        </button>
+
 
         <button
           className="clear-button"
@@ -84,17 +120,32 @@ function Toolbar({
         </button>
 
 
-        <div className="user-count">
+        <div className="connection-status">
 
-          👥 {connectedUsers}
-          {" "}
-          {connectedUsers === 1
-            ? "User"
-            : "Users"}
+          <span
+            className={
+              connected
+                ? "status-dot online"
+                : "status-dot offline"
+            }
+          ></span>
+
+          {connected
+            ? "Live"
+            : "Offline"}
 
         </div>
 
+
+        <div className="user-count">
+
+          👥 {connectedUsers}
+
+        </div>
+
+
       </div>
+
 
     </div>
 
