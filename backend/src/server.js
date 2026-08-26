@@ -32,7 +32,7 @@ app.get('/', (req, res) => {
   res.status(200).json({ status: 'OK', message: 'SyncSpace server is running.' });
 });
 
-const PORT = process.env.PORT || 5000;
+const PORT = process.env.PORT || 5001;
 
 httpServer.listen(PORT, () => {
   console.log(`Server is running on port ${PORT}`);
