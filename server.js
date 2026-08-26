@@ -8,6 +8,7 @@ const {
     deleteDocument,
     getAllDocumentsByUser
 } = require('./dboperation');
+const { registerUser, loginUser, authenticateToken } = require('./auth');
 
 const app = express();
 connectDB();
@@ -18,30 +19,47 @@ app.get('/', (req, res) => {
     res.send('Server is running...');
 });
 
-// Create a new document
-app.post('/api/documents', async (req, res) => {
+app.post('/api/auth/register', async (req, res) => {
     try {
-        const { title, content, ownerId } = req.body;
-        const doc = await createDocument(title, content, ownerId);
+        const { name, email, password } = req.body;
+        const user = await registerUser(name, email, password);
+        res.status(201).json({ success: true, user });
+    } catch (err) {
+        res.status(400).json({ success: false, error: err.message });
+    }
+});
+
+app.post('/api/auth/login', async (req, res) => {
+    try {
+        const { email, password } = req.body;
+        const result = await loginUser(email, password);
+        res.status(200).json({ success: true, ...result });
+    } catch (err) {
+        res.status(400).json({ success: false, error: err.message });
+    }
+});
+
+app.post('/api/documents', authenticateToken, async (req, res) => {
+    try {
+        const { title, content } = req.body;
+        const doc = await createDocument(title, content, req.user.id);
         res.status(201).json({ success: true, document: doc });
     } catch (err) {
         res.status(500).json({ success: false, error: err.message });
     }
 });
 
-// Get document by ID
-app.get('/api/documents/:id', async (req, res) => {
+app.get('/api/documents/:id', authenticateToken, async (req, res) => {
     try {
         const doc = await getDocumentById(req.params.id);
-        if (!doc) return res.status(404).json({ success: false, message: "Document not found" });
+        if (!doc) return res.status(404).json({ success: false, message: 'Document not found' });
         res.status(200).json({ success: true, document: doc });
     } catch (err) {
         res.status(500).json({ success: false, error: err.message });
     }
 });
 
-// Update document content
-app.put('/api/documents/:id', async (req, res) => {
+app.put('/api/documents/:id', authenticateToken, async (req, res) => {
     try {
         const { content } = req.body;
         const updatedDoc = await updateDocument(req.params.id, content);
@@ -51,20 +69,18 @@ app.put('/api/documents/:id', async (req, res) => {
     }
 });
 
-// Delete document
-app.delete('/api/documents/:id', async (req, res) => {
+app.delete('/api/documents/:id', authenticateToken, async (req, res) => {
     try {
         await deleteDocument(req.params.id);
-        res.status(200).json({ success: true, message: "Document deleted successfully" });
+        res.status(200).json({ success: true, message: 'Document deleted successfully' });
     } catch (err) {
         res.status(500).json({ success: false, error: err.message });
     }
 });
 
-// Get all documents of a user
-app.get('/api/users/:userId/documents', async (req, res) => {
+app.get('/api/my-documents', authenticateToken, async (req, res) => {
     try {
-        const docs = await getAllDocumentsByUser(req.params.userId);
+        const docs = await getAllDocumentsByUser(req.user.id);
         res.status(200).json({ success: true, documents: docs });
     } catch (err) {
         res.status(500).json({ success: false, error: err.message });
