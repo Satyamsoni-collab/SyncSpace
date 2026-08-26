@@ -1,54 +1,109 @@
-import React, { useState, useEffect } from 'react';
-import Whiteboard from './components/whiteboard/Whiteboard';
-import JoinRoom from './components/JoinRoom';
-import { useSocket, SocketProvider } from './context/SocketContext';
+import React from "react";
 
-const AppContent = () => {
-  const socket = useSocket();
-  const [hasJoined, setHasJoined] = useState(false);
+import "./App.css";
 
-  useEffect(() => {
-    if (!socket) return;
+import Whiteboard from
+  "./components/whiteboard/Whiteboard";
 
-    // Listen for backend room events and console.log the data
-    socket.on('user-joined', (data) => {
-      console.log('Event received [user-joined]:', data);
-    });
+import CodeEditor from
+  "./components/editor/CodeEditor";
 
-    socket.on('room-users', (users) => {
-      console.log('Event received [room-users]:', users);
-    });
-
-    socket.on('user-disconnected', (data) => {
-      console.log('Event received [user-disconnected]:', data);
-    });
-
-    // Clean up event listeners to prevent memory leaks or duplicate logs
-    return () => {
-      socket.off('user-joined');
-      socket.off('room-users');
-      socket.off('user-disconnected');
-    };
-  }, [socket]);
-
-  return (
-    <div style={{ width: "100vw", height: "100vh" }}>
-      {!hasJoined ? (
-        <JoinRoom onJoin={() => setHasJoined(true)} />
-      ) : (
-        <Whiteboard />
-      )}
-    </div>
-  );
-};
 
 function App() {
+
   return (
-    // Wrap the entire app with the SocketProvider
-    <SocketProvider>
-      <AppContent />
-    </SocketProvider>
+
+    <div className="app-shell">
+
+      <nav className="top-nav">
+
+        <div className="brand">
+
+          <h1>SyncSpace</h1>
+
+          <p>
+            Real-Time Collaborative Workspace
+          </p>
+
+        </div>
+
+
+        <div className="nav-center">
+
+          <span className="live-dot"></span>
+
+          <span>
+            Live Collaboration
+          </span>
+
+        </div>
+
+
+        <div className="nav-actions">
+
+          <button
+            className="btn outline"
+          >
+            Share Room
+          </button>
+
+          <button
+            className="btn primary"
+          >
+            Export
+          </button>
+
+        </div>
+
+      </nav>
+
+
+      <main className="workspace">
+
+        <section
+          className="workspace-panel left-panel"
+        >
+
+          <div className="panel-title">
+
+            <div>
+
+              <h2>
+                Collaborative Whiteboard
+              </h2>
+
+              <p>
+                Draw and brainstorm together
+              </p>
+
+            </div>
+
+          </div>
+
+
+          <Whiteboard />
+
+        </section>
+
+
+        <div className="divider"></div>
+
+
+        <section
+          className="workspace-panel right-panel"
+        >
+
+          <CodeEditor />
+
+        </section>
+
+      </main>
+
+    </div>
+
   );
+
 }
+
 
 export default App;

@@ -1,54 +1,494 @@
-import { useRef, useState } from "react";
-import { Stage, Layer, Line, Rect, Text } from "react-konva";
+import React, {
+  useEffect,
+  useRef,
+  useState
+} from "react";
+
+import {
+  Stage,
+  Layer,
+  Line,
+  Rect,
+  Text,
+  Circle
+} from "react-konva";
+
 import Toolbar from "./Toolbar";
+
+import {
+  useSocket
+} from "../../context/SocketContext";
+
 import "./whiteboard.css";
+
 
 function Whiteboard() {
 
+  const socket = useSocket();
+
   const stageRef = useRef(null);
 
-  const [tool, setTool] = useState("pen");
-
-  const [color, setColor] = useState("#000000");
-
-  const [shapes, setShapes] = useState([]);
-
-  const [isDrawing, setIsDrawing] = useState(false);
-
-  const [startPoint, setStartPoint] = useState(null);
+  const containerRef = useRef(null);
 
 
-  // Get mouse position
-  const getPointerPosition = () => {
+  const [roomId] =
+    useState("syncspace-demo");
 
-    const stage = stageRef.current;
 
-    if (!stage) {
+  const [userName] =
+    useState(() => {
+
+      const savedName =
+        localStorage.getItem(
+          "syncspace-user-name"
+        );
+
+      if (savedName) {
+        return savedName;
+      }
+
+      const newName =
+        `User-${Math.floor(
+          Math.random() * 1000
+        )}`;
+
+      localStorage.setItem(
+        "syncspace-user-name",
+        newName
+      );
+
+      return newName;
+
+    });
+
+
+  const [tool, setTool] =
+    useState("pen");
+
+  const [color, setColor] =
+    useState("#2563eb");
+
+  const [shapes, setShapes] =
+    useState([]);
+
+  const [users, setUsers] =
+    useState([]);
+
+  const [isDrawing, setIsDrawing] =
+    useState(false);
+
+  const [startPoint, setStartPoint] =
+    useState(null);
+
+  const [stageSize, setStageSize] =
+    useState({
+      width: 800,
+      height: 500
+    });
+
+
+  /*
+    JOIN ROOM
+  */
+
+  useEffect(() => {
+
+    if (!socket) {
+      return;
+    }
+
+
+    const joinRoom = () => {
+
+      socket.emit(
+        "join-room",
+        {
+          roomId,
+          userName
+        }
+      );
+
+    };
+
+
+    if (socket.connected) {
+
+      joinRoom();
+
+    } else {
+
+      socket.on(
+        "connect",
+        joinRoom
+      );
+
+    }
+
+
+    return () => {
+
+      socket.off(
+        "connect",
+        joinRoom
+      );
+
+    };
+
+  }, [
+    socket,
+    roomId,
+    userName
+  ]);
+
+
+  /*
+    USER LIST
+  */
+
+  useEffect(() => {
+
+    if (!socket) {
+      return;
+    }
+
+
+    const handleRoomUsers =
+      (roomUsers) => {
+
+        setUsers(
+          Array.isArray(roomUsers)
+            ? roomUsers
+            : []
+        );
+
+      };
+
+
+    const handleUserJoined =
+      (user) => {
+
+        if (!user) {
+          return;
+        }
+
+        setUsers(
+          (previousUsers) => {
+
+            const exists =
+              previousUsers.some(
+                (item) =>
+                  item.id === user.id
+              );
+
+            if (exists) {
+              return previousUsers;
+            }
+
+            return [
+              ...previousUsers,
+              user
+            ];
+
+          }
+        );
+
+      };
+
+
+    const handleUserLeft =
+      ({ id }) => {
+
+        setUsers(
+          (previousUsers) =>
+            previousUsers.filter(
+              (user) =>
+                user.id !== id
+            )
+        );
+
+      };
+
+
+    socket.on(
+      "room-users",
+      handleRoomUsers
+    );
+
+    socket.on(
+      "user-joined",
+      handleUserJoined
+    );
+
+    socket.on(
+      "user-left",
+      handleUserLeft
+    );
+
+
+    return () => {
+
+      socket.off(
+        "room-users",
+        handleRoomUsers
+      );
+
+      socket.off(
+        "user-joined",
+        handleUserJoined
+      );
+
+      socket.off(
+        "user-left",
+        handleUserLeft
+      );
+
+    };
+
+  }, [socket]);
+
+
+  /*
+    REMOTE DRAWING
+  */
+
+  useEffect(() => {
+
+    if (!socket) {
+      return;
+    }
+
+
+    const handleRemoteDrawing =
+      ({ shape }) => {
+
+        if (!shape) {
+          return;
+        }
+
+        setShapes(
+          (previousShapes) => {
+
+            const exists =
+              previousShapes.some(
+                (item) =>
+                  item.id === shape.id
+              );
+
+            if (exists) {
+              return previousShapes;
+            }
+
+            return [
+              ...previousShapes,
+              shape
+            ];
+
+          }
+        );
+
+      };
+
+
+    socket.on(
+      "whiteboard-draw",
+      handleRemoteDrawing
+    );
+
+
+    return () => {
+
+      socket.off(
+        "whiteboard-draw",
+        handleRemoteDrawing
+      );
+
+    };
+
+  }, [socket]);
+
+
+  /*
+    REMOTE CLEAR
+  */
+
+  useEffect(() => {
+
+    if (!socket) {
+      return;
+    }
+
+
+    const handleRemoteClear = () => {
+
+      setShapes([]);
+
+    };
+
+
+    socket.on(
+      "whiteboard-clear",
+      handleRemoteClear
+    );
+
+
+    return () => {
+
+      socket.off(
+        "whiteboard-clear",
+        handleRemoteClear
+      );
+
+    };
+
+  }, [socket]);
+
+
+  /*
+    REMOTE CURSOR
+  */
+
+  useEffect(() => {
+
+    if (!socket) {
+      return;
+    }
+
+
+    const handleCursorMove =
+      ({
+        id,
+        name,
+        x,
+        y
+      }) => {
+
+        setUsers(
+          (previousUsers) =>
+            previousUsers.map(
+              (user) => {
+
+                if (
+                  user.id === id
+                ) {
+
+                  return {
+                    ...user,
+                    name,
+                    x,
+                    y
+                  };
+
+                }
+
+                return user;
+
+              }
+            )
+        );
+
+      };
+
+
+    socket.on(
+      "cursor-move",
+      handleCursorMove
+    );
+
+
+    return () => {
+
+      socket.off(
+        "cursor-move",
+        handleCursorMove
+      );
+
+    };
+
+  }, [socket]);
+
+
+  /*
+    RESPONSIVE CANVAS
+  */
+
+  useEffect(() => {
+
+    const updateSize = () => {
+
+      if (!containerRef.current) {
+        return;
+      }
+
+      setStageSize({
+
+        width:
+          containerRef.current
+            .clientWidth,
+
+        height:
+          containerRef.current
+            .clientHeight
+
+      });
+
+    };
+
+
+    updateSize();
+
+
+    window.addEventListener(
+      "resize",
+      updateSize
+    );
+
+
+    return () => {
+
+      window.removeEventListener(
+        "resize",
+        updateSize
+      );
+
+    };
+
+  }, []);
+
+
+  function getPointerPosition() {
+
+    if (!stageRef.current) {
       return null;
     }
 
-    return stage.getPointerPosition();
-  };
+    return stageRef.current
+      .getPointerPosition();
+
+  }
 
 
-  // Mouse Down
-  const handleMouseDown = () => {
+  /*
+    MOUSE DOWN
+  */
 
-    const position = getPointerPosition();
+  function handleMouseDown() {
+
+    const position =
+      getPointerPosition();
 
     if (!position) {
       return;
     }
 
 
-    // PEN
     if (tool === "pen") {
 
       setIsDrawing(true);
 
       const newLine = {
 
-        id: Date.now(),
+        id:
+          `${socket?.id}-${Date.now()}-${Math.random()}`,
 
         type: "line",
 
@@ -60,131 +500,268 @@ function Whiteboard() {
         stroke: color,
 
         strokeWidth: 3
+
       };
 
 
-      setShapes((previousShapes) => [
-        ...previousShapes,
-        newLine
-      ]);
-    }
+      setShapes(
+        (previousShapes) => [
+          ...previousShapes,
+          newLine
+        ]
+      );
 
-
-    // RECTANGLE / TEXT
-    else {
-
-      setStartPoint(position);
-
-    }
-  };
-
-
-  // Mouse Move
-  const handleMouseMove = () => {
-
-    if (!isDrawing) {
       return;
+
     }
 
 
-    const position = getPointerPosition();
+    setStartPoint(position);
+
+  }
+
+
+  /*
+    MOUSE MOVE
+  */
+
+  function handleMouseMove() {
+
+    const position =
+      getPointerPosition();
 
     if (!position) {
       return;
     }
 
 
-    setShapes((previousShapes) => {
-      const updatedShapes = [...previousShapes];
-      const lastIndex = updatedShapes.length - 1;
-      const lastShape = updatedShapes[lastIndex];
+    /*
+      SEND CURSOR
+    */
 
-      if (!lastShape || lastShape.type !== "line" || !Array.isArray(lastShape.points)) {
-        return previousShapes;
+    if (socket?.connected) {
+
+      socket.emit(
+        "cursor-move",
+        {
+          roomId,
+          x: position.x,
+          y: position.y
+        }
+      );
+
+    }
+
+
+    /*
+      PEN DRAWING
+    */
+
+    if (
+      !isDrawing ||
+      tool !== "pen"
+    ) {
+      return;
+    }
+
+
+    setShapes(
+      (previousShapes) => {
+
+        if (
+          previousShapes.length === 0
+        ) {
+          return previousShapes;
+        }
+
+
+        const updatedShapes =
+          [...previousShapes];
+
+        const lastIndex =
+          updatedShapes.length - 1;
+
+        const lastShape =
+          updatedShapes[lastIndex];
+
+
+        if (
+          !lastShape ||
+          lastShape.type !== "line"
+        ) {
+          return previousShapes;
+        }
+
+
+        updatedShapes[lastIndex] = {
+
+          ...lastShape,
+
+          points: [
+            ...lastShape.points,
+            position.x,
+            position.y
+          ]
+
+        };
+
+
+        return updatedShapes;
+
       }
+    );
 
-      updatedShapes[lastIndex] = {
-        ...lastShape,
-        points: [...lastShape.points, position.x, position.y]
-      };
-
-      return updatedShapes;
-
-    });
-
-  };
+  }
 
 
-  // Mouse Up
-  const handleMouseUp = () => {
+  /*
+    MOUSE UP
+  */
+
+  function handleMouseUp() {
 
     if (tool === "pen") {
 
       setIsDrawing(false);
 
+
+      setShapes(
+        (currentShapes) => {
+
+          const lastShape =
+            currentShapes[
+              currentShapes.length - 1
+            ];
+
+          if (
+            socket?.connected &&
+            lastShape
+          ) {
+
+            socket.emit(
+              "whiteboard-draw",
+              {
+                roomId,
+                shape: lastShape
+              }
+            );
+
+          }
+
+          return currentShapes;
+
+        }
+      );
+
+
       return;
+
     }
 
 
-    const position = getPointerPosition();
+    const position =
+      getPointerPosition();
 
-    if (!position || !startPoint) {
+    if (
+      !position ||
+      !startPoint
+    ) {
+
+      setStartPoint(null);
+
       return;
+
     }
 
 
-    // RECTANGLE
-    if (tool === "rectangle") {
+    /*
+      RECTANGLE
+    */
+
+    if (
+      tool === "rectangle"
+    ) {
 
       const rectangle = {
 
-        id: Date.now(),
+        id:
+          `${socket?.id}-${Date.now()}-${Math.random()}`,
 
         type: "rectangle",
 
-        x: Math.min(
-          startPoint.x,
-          position.x
-        ),
+        x:
+          Math.min(
+            startPoint.x,
+            position.x
+          ),
 
-        y: Math.min(
-          startPoint.y,
-          position.y
-        ),
+        y:
+          Math.min(
+            startPoint.y,
+            position.y
+          ),
 
-        width: Math.abs(
-          position.x - startPoint.x
-        ),
+        width:
+          Math.abs(
+            position.x -
+            startPoint.x
+          ),
 
-        height: Math.abs(
-          position.y - startPoint.y
-        ),
+        height:
+          Math.abs(
+            position.y -
+            startPoint.y
+          ),
 
         stroke: color,
 
-        strokeWidth: 2
+        strokeWidth: 3
+
       };
 
 
-      setShapes((previousShapes) => [
-        ...previousShapes,
-        rectangle
-      ]);
+      setShapes(
+        (previousShapes) => [
+          ...previousShapes,
+          rectangle
+        ]
+      );
+
+
+      socket?.emit(
+        "whiteboard-draw",
+        {
+          roomId,
+          shape: rectangle
+        }
+      );
+
     }
 
 
-    // TEXT
-    if (tool === "text") {
+    /*
+      TEXT
+    */
+
+    if (
+      tool === "text"
+    ) {
 
       const textValue =
-        window.prompt("Enter text");
+        window.prompt(
+          "Enter your text"
+        );
 
 
-      if (textValue && textValue.trim()) {
+      if (
+        textValue &&
+        textValue.trim()
+      ) {
 
         const textShape = {
 
-          id: Date.now(),
+          id:
+            `${socket?.id}-${Date.now()}-${Math.random()}`,
 
           type: "text",
 
@@ -192,32 +769,59 @@ function Whiteboard() {
 
           y: startPoint.y,
 
-          text: textValue,
+          text:
+            textValue.trim(),
 
           fill: color,
 
-          fontSize: 20
+          fontSize: 22
+
         };
 
 
-        setShapes((previousShapes) => [
-          ...previousShapes,
-          textShape
-        ]);
+        setShapes(
+          (previousShapes) => [
+            ...previousShapes,
+            textShape
+          ]
+        );
+
+
+        socket?.emit(
+          "whiteboard-draw",
+          {
+            roomId,
+            shape: textShape
+          }
+        );
+
       }
+
     }
 
 
     setStartPoint(null);
 
-  };
+  }
 
 
-  const clearCanvas = () => {
+  /*
+    CLEAR
+  */
+
+  function clearCanvas() {
+
     setShapes([]);
-    setIsDrawing(false);
-    setStartPoint(null);
-  };
+
+
+    socket?.emit(
+      "whiteboard-clear",
+      {
+        roomId
+      }
+    );
+
+  }
 
 
   return (
@@ -236,117 +840,218 @@ function Whiteboard() {
 
         clearCanvas={clearCanvas}
 
+        connectedUsers={
+          users.length
+        }
+
       />
 
 
-      <div className="canvas-container">
+      <div
+        className="canvas-container"
+        ref={containerRef}
+      >
 
         <Stage
 
           ref={stageRef}
 
-          width={window.innerWidth / 2 - 20}
+          width={
+            stageSize.width
+          }
 
-          height={window.innerHeight - 150}
+          height={
+            stageSize.height
+          }
 
-          onMouseDown={handleMouseDown}
+          onMouseDown={
+            handleMouseDown
+          }
 
-          onMouseMove={handleMouseMove}
+          onMouseMove={
+            handleMouseMove
+          }
 
-          onMouseUp={handleMouseUp}
+          onMouseUp={
+            handleMouseUp
+          }
 
         >
 
           <Layer>
 
-            {shapes.map((shape) => {
+            {shapes.map(
+              (shape) => {
 
-              // LINE
+                if (
+                  shape.type === "line"
+                ) {
 
-              if (shape.type === "line") {
+                  return (
+
+                    <Line
+
+                      key={shape.id}
+
+                      points={
+                        shape.points
+                      }
+
+                      stroke={
+                        shape.stroke
+                      }
+
+                      strokeWidth={
+                        shape.strokeWidth
+                      }
+
+                      lineCap="round"
+
+                      lineJoin="round"
+
+                    />
+
+                  );
+
+                }
+
+
+                if (
+                  shape.type ===
+                  "rectangle"
+                ) {
+
+                  return (
+
+                    <Rect
+
+                      key={shape.id}
+
+                      x={shape.x}
+
+                      y={shape.y}
+
+                      width={
+                        shape.width
+                      }
+
+                      height={
+                        shape.height
+                      }
+
+                      stroke={
+                        shape.stroke
+                      }
+
+                      strokeWidth={
+                        shape.strokeWidth
+                      }
+
+                      cornerRadius={4}
+
+                    />
+
+                  );
+
+                }
+
+
+                if (
+                  shape.type === "text"
+                ) {
+
+                  return (
+
+                    <Text
+
+                      key={shape.id}
+
+                      x={shape.x}
+
+                      y={shape.y}
+
+                      text={
+                        shape.text
+                      }
+
+                      fill={
+                        shape.fill
+                      }
+
+                      fontSize={
+                        shape.fontSize
+                      }
+
+                    />
+
+                  );
+
+                }
+
+
+                return null;
+
+              }
+            )}
+
+
+            {users.map(
+              (user) => {
+
+                if (
+                  user.id === socket?.id ||
+                  user.x === null ||
+                  user.y === null
+                ) {
+                  return null;
+                }
+
 
                 return (
 
-                  <Line
+                  <React.Fragment
+                    key={user.id}
+                  >
 
-                    key={shape.id}
+                    <Circle
 
-                    points={shape.points}
+                      x={user.x}
 
-                    stroke={shape.stroke}
+                      y={user.y}
 
-                    strokeWidth={shape.strokeWidth}
+                      radius={6}
 
-                    lineCap="round"
+                      fill="#2563eb"
 
-                    lineJoin="round"
+                    />
 
-                  />
+
+                    <Text
+
+                      x={
+                        user.x + 10
+                      }
+
+                      y={
+                        user.y - 20
+                      }
+
+                      text={
+                        user.name
+                      }
+
+                      fontSize={13}
+
+                      fill="#1e40af"
+
+                    />
+
+                  </React.Fragment>
 
                 );
 
               }
-
-
-              // RECTANGLE
-
-              if (shape.type === "rectangle") {
-
-                return (
-
-                  <Rect
-
-                    key={shape.id}
-
-                    x={shape.x}
-
-                    y={shape.y}
-
-                    width={shape.width}
-
-                    height={shape.height}
-
-                    stroke={shape.stroke}
-
-                    strokeWidth={shape.strokeWidth}
-
-                  />
-
-                );
-
-              }
-
-
-              // TEXT
-
-              if (shape.type === "text") {
-
-                return (
-
-                  <Text
-
-                    key={shape.id}
-
-                    x={shape.x}
-
-                    y={shape.y}
-
-                    text={shape.text}
-
-                    fill={shape.fill}
-
-                    fontSize={shape.fontSize}
-
-                  />
-
-                );
-
-              }
-
-
-              return null;
-
-            })}
+            )}
 
           </Layer>
 
@@ -357,6 +1062,8 @@ function Whiteboard() {
     </div>
 
   );
+
 }
+
 
 export default Whiteboard;
