@@ -24,8 +24,7 @@ export const socketHandler = (io) => {
         socket.data.roomId = roomId;
         socket.data.userName = userName || `User-${socket.id.substring(0, 5)}`;
 
-        // Construct standardized user object 
-        // (Keeping both id/name and socketId/username to satisfy both frontend and roomManager)
+        // Construct standardized user object
         const user = { 
           socketId: socket.id, 
           id: socket.id,       
@@ -59,7 +58,7 @@ export const socketHandler = (io) => {
       try {
         const { roomId, shape } = data;
         
-        if (!roomId || !shape) return; // Prevent crashes
+        if (!roomId || !shape) return; 
 
         socket.to(roomId).emit('whiteboard-draw', { shape });
       } catch (error) {
@@ -88,7 +87,6 @@ export const socketHandler = (io) => {
       try {
         const { roomId, x, y } = data;
         
-        // Prevent broadcasting garbage coordinates
         if (!roomId || x === undefined || y === undefined) return;
 
         socket.to(roomId).emit('cursor-move', {
@@ -124,13 +122,14 @@ export const socketHandler = (io) => {
       try {
         console.log(`Client disconnected: ${socket.id}`);
         
-        // Remove from roomManager (This also automatically deletes empty rooms)
+        // 4. Memory Leak Prevention: 
+        // leaveRoom() accesses roomManager.js which actively checks and calls rooms.delete(roomId) 
+        // if the room size drops to 0. This guarantees memory is freed up.
         const result = leaveRoom(socket.id);
         
         if (result) {
           const { roomId, user } = result;
           
-          // Emit user-left payload required by your frontend
           socket.to(roomId).emit('user-left', { id: socket.id });
 
           // Fallback legacy event
