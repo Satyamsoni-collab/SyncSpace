@@ -4,9 +4,12 @@ import { io } from "socket.io-client";
 const SOCKET_URL = "http://localhost:5000";
 
 
-export const socket = io(SOCKET_URL, {
-  autoConnect: false
-});
+export const socket = io(
+  SOCKET_URL,
+  {
+    autoConnect: false
+  }
+);
 
 
 export function connectToServer(
@@ -15,12 +18,37 @@ export function connectToServer(
 ) {
 
   if (!socket.connected) {
+
     socket.connect();
+
   }
 
 
-  socket.emit("join-room", {
-    roomId,
-    userName
-  });
+  socket.emit(
+    "join-room",
+    {
+      roomId,
+      userName
+    }
+  );
+
+}
+
+
+export function leaveRoom(
+  roomId
+) {
+
+  if (!socket.connected) {
+    return;
+  }
+
+
+  socket.emit(
+    "leave-room",
+    {
+      roomId
+    }
+  );
+
 }
