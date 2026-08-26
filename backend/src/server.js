@@ -22,8 +22,6 @@ const io = new Server(server, {
   }
 });
 
-const PORT = 5000;
-
 /*
   roomId -> Map(socketId -> user)
 */
@@ -35,15 +33,9 @@ app.get("/", (req, res) => {
   });
 });
 
+// Using Port 5001 to avoid macOS AirPlay conflict
 const PORT = process.env.PORT || 5001;
 
-});
-
-
 server.listen(PORT, () => {
-
-  console.log(
-    `SyncSpace backend running on http://localhost:${PORT}`
-  );
-
+  console.log(`SyncSpace backend running on http://localhost:${PORT}`);
 });
