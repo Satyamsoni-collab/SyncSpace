@@ -1,31 +1,67 @@
-import React, { createContext, useContext, useEffect, useState } from 'react';
-import { io } from 'socket.io-client';
+import React, {
+  createContext,
+  useContext,
+  useEffect,
+  useState
+} from "react";
 
-const SOCKET_URL = 'http://localhost:5001';
+import { io } from "socket.io-client";
 
-const SocketContext = createContext();
+const SOCKET_URL =
+  "http://localhost:5000";
 
-export const useSocket = () => {
-  return useContext(SocketContext);
-};
+const SocketContext =
+  createContext(null);
 
-export const SocketProvider = ({ children }) => {
-  const [socket, setSocket] = useState(null);
+
+export function useSocket() {
+
+  return useContext(
+    SocketContext
+  );
+
+}
+
+
+export function SocketProvider({
+  children
+}) {
+
+  const [socket, setSocket] =
+    useState(null);
+
 
   useEffect(() => {
-    // Initialize the connection
-    const newSocket = io(SOCKET_URL);
+
+    const newSocket = io(
+      SOCKET_URL,
+      {
+        autoConnect: true
+      }
+    );
+
     setSocket(newSocket);
 
-    // Clean up connection on unmount
+
     return () => {
+
       newSocket.disconnect();
+
     };
+
   }, []);
 
+
   return (
-    <SocketContext.Provider value={socket}>
+
+    <SocketContext.Provider
+      value={socket}
+    >
+
       {children}
+
     </SocketContext.Provider>
+
   );
-};
+
+}

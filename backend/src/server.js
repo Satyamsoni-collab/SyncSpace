@@ -1,39 +1,49 @@
-import express from 'express';
-import { createServer } from 'http';
-import { Server } from 'socket.io';
-import cors from 'cors';
-import dotenv from 'dotenv';
-import { socketHandler } from './socket/socketHandler.js';
-
-// Load environment variables
-dotenv.config();
+import express from "express";
+import http from "http";
+import cors from "cors";
+import { Server } from "socket.io";
 
 const app = express();
-const httpServer = createServer(app);
 
-// Configure CORS for Express
-app.use(cors({
-  origin: '*', // Allow all origins for now, update for production
-}));
+app.use(
+  cors({
+    origin: "http://localhost:5173"
+  })
+);
 
-// Configure Socket.io with CORS allowing all origins
-const io = new Server(httpServer, {
+app.use(express.json());
+
+const server = http.createServer(app);
+
+const io = new Server(server, {
   cors: {
-    origin: '*',
-    methods: ['GET', 'POST']
+    origin: "http://localhost:5173",
+    methods: ["GET", "POST"]
   }
 });
 
-// Initialize socket handlers
-socketHandler(io);
+const PORT = 5000;
 
-// Basic health check route
-app.get('/', (req, res) => {
-  res.status(200).json({ status: 'OK', message: 'SyncSpace server is running.' });
+/*
+  roomId -> Map(socketId -> user)
+*/
+const rooms = new Map();
+
+app.get("/", (req, res) => {
+  res.json({
+    message: "SyncSpace backend is running"
+  });
 });
 
 const PORT = process.env.PORT || 5001;
 
-httpServer.listen(PORT, () => {
-  console.log(`Server is running on port ${PORT}`);
+});
+
+
+server.listen(PORT, () => {
+
+  console.log(
+    `SyncSpace backend running on http://localhost:${PORT}`
+  );
+
 });
