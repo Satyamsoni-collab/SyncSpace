@@ -1,92 +1,44 @@
-import React, { useState } from "react";
+import React, { useState } from 'react';
+import Whiteboard from './components/whiteboard/Whiteboard';
+import './App.css';
 
-import "./App.css";
+// A lightweight placeholder for joining rooms.
+// If you already have a JoinRoom component, you can replace this with your import!
+const JoinRoomPlaceholder = ({ onJoin }) => {
+  const [username, setUsername] = useState('');
+  const [roomId, setRoomId] = useState('');
+  
+  return (
+    <div className="join-room-container">
+      <h2>Join SyncSpace</h2>
+      <form onSubmit={(e) => { e.preventDefault(); onJoin(roomId, username); }}>
+        <input placeholder="Username" value={username} onChange={e => setUsername(e.target.value)} required />
+        <input placeholder="Room ID" value={roomId} onChange={e => setRoomId(e.target.value)} required />
+        <button type="submit" className="btn primary">Join Workspace</button>
+      </form>
+    </div>
+  );
+};
 
-import JoinRoom from "./components/JoinRoom";
-import Whiteboard from "./components/whiteboard/Whiteboard";
-import CodeEditor from "./components/editor/CodeEditor";
-
+// Placeholder for the Monaco Code Editor
+const CodeEditorPlaceholder = () => (
+  <div className="placeholder-container editor-container">
+    <h3>💻 Code Editor Component</h3>
+    <p>Waiting for Monaco Editor to mount...</p>
+  </div>
+);
 
 function App() {
+  // Room Joining State Management
+  const [joined, setJoined] = useState(false);
+  const [roomId, setRoomId] = useState('');
+  const [username, setUsername] = useState('');
 
-  const [workspace, setWorkspace] = useState(null);
-
-
-  const handleJoinRoom = (userName, roomId) => {
-
-    setWorkspace({
-      userName,
-      roomId
-    });
-
+  const handleJoin = (room, user) => {
+    setRoomId(room);
+    setUsername(user);
+    setJoined(true);
   };
-
-
-  const handleLeaveRoom = () => {
-
-    const confirmLeave = window.confirm(
-      "Are you sure you want to leave this workspace?"
-    );
-
-
-    if (confirmLeave) {
-
-      window.location.reload();
-
-    }
-
-  };
-
-
-  const handleShare = async () => {
-
-    if (!workspace) {
-      return;
-    }
-
-
-    const shareText =
-      `Join my SyncSpace workspace!
-
-Room ID: ${workspace.roomId}
-
-Open SyncSpace and enter this Room ID to collaborate with me.`;
-
-
-    try {
-
-      await navigator.clipboard.writeText(
-        shareText
-      );
-
-
-      alert(
-        "Room details copied to clipboard!"
-      );
-
-    } catch (error) {
-
-      alert(
-        `Room ID: ${workspace.roomId}`
-      );
-
-    }
-
-  };
-
-
-  if (!workspace) {
-
-    return (
-
-      <JoinRoom
-        onJoin={handleJoinRoom}
-      />
-
-    );
-
-  }
-
 
   return (
 
@@ -161,9 +113,13 @@ Open SyncSpace and enter this Room ID to collaborate with me.`;
 
         </div>
 
-
-
-        {/* Actions */}
+        {/* Conditionally render Room ID & Username if the user has joined */}
+        {joined && (
+          <div className="nav-info">
+            <span className="room-badge">Room: {roomId}</span>
+            <span className="user-badge">User: {username}</span>
+          </div>
+        )}
 
         <div className="nav-actions">
 
@@ -191,222 +147,27 @@ Open SyncSpace and enter this Room ID to collaborate with me.`;
 
         </div>
 
-
-      </header>
-
-
-
-      {/* Main Workspace */}
-
-      <main className="workspace">
-
-
-        {/* ================= WHITEBOARD ================= */}
-
-        <section className="workspace-panel whiteboard-panel">
-
-
-          <div className="panel-header">
-
-
-            <div className="panel-title-group">
-
-
-              <div className="panel-icon purple">
-
-                🎨
-
-              </div>
-
-
-              <div>
-
-                <h2>
-                  Whiteboard
-                </h2>
-
-                <p>
-                  Draw and brainstorm together in real time
-                </p>
-
-              </div>
-
-
-            </div>
-
-
-
-            <div className="panel-live">
-
-              <span className="pulse-dot"></span>
-
-              LIVE
-
-            </div>
-
-
-          </div>
-
-
-
-          <div className="panel-content">
-
-
-            {/* IMPORTANT:
-                Send the same roomId and userName
-                to the Whiteboard
-            */}
-
-            <Whiteboard
-              roomId={workspace.roomId}
-              userName={workspace.userName}
-            />
-
-
-          </div>
-
-
-        </section>
-
-
-
-        {/* Workspace Divider */}
-
-        <div className="workspace-divider">
-
-
-          <div className="divider-line"></div>
-
-
-          <div className="divider-circle">
-
-            ↔
-
-          </div>
-
-
-          <div className="divider-line"></div>
-
-
-        </div>
-
-
-
-        {/* ================= CODE EDITOR ================= */}
-
-        <section className="workspace-panel editor-panel">
-
-
-          <div className="panel-header">
-
-
-            <div className="panel-title-group">
-
-
-              <div className="panel-icon blue">
-
-                💻
-
-              </div>
-
-
-              <div>
-
-                <h2>
-                  Code Editor
-                </h2>
-
-                <p>
-                  Write and edit code together instantly
-                </p>
-
-              </div>
-
-
-            </div>
-
-
-
-            <div className="panel-live">
-
-              <span className="pulse-dot"></span>
-
-              CONNECTED
-
-            </div>
-
-
-          </div>
-
-
-
-          <div className="panel-content">
-
-
-            {/* IMPORTANT:
-                Send the same roomId and userName
-                to the Code Editor
-            */}
-
-            <CodeEditor
-              roomId={workspace.roomId}
-              userName={workspace.userName}
-            />
-
-
-          </div>
-
-
-        </section>
-
-
-      </main>
-
-
-
-      {/* Bottom Status Bar */}
-
-      <footer className="status-bar">
-
-
-        <div className="status-left">
-
-
-          <span className="status-online-dot"></span>
-
-
-          <span>
-            You are collaborating as
-          </span>
-
-
-          <strong>
-            {workspace.userName}
-          </strong>
-
-
-        </div>
-
-
-
-        <div className="status-center">
-
-          ⚡ Changes sync instantly across connected users
-
-        </div>
-
-
-
-        <div className="status-right">
-
-          SyncSpace © 2026
-
-        </div>
-
-
-      </footer>
-
-
+      {/* 2. Main Workspace or Join Room Screen */}
+      {!joined ? (
+        <JoinRoomPlaceholder onJoin={handleJoin} />
+      ) : (
+        <main className="workspace">
+          
+          {/* Left Side: Whiteboard */}
+          <section className="workspace-panel left-panel">
+            <Whiteboard />
+          </section>
+
+          {/* Visual Divider (Drag capabilities can be added later) */}
+          <div className="divider"></div>
+
+          {/* Right Side: Monaco Code Editor Placeholder */}
+          <section className="workspace-panel right-panel">
+            <CodeEditorPlaceholder />
+          </section>
+
+        </main>
+      )}
     </div>
 
   );
