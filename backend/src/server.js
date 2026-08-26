@@ -6,11 +6,10 @@ import { socketHandler } from "./socket/socketHandler.js";
 
 const app = express();
 
-app.use(
-  cors({
-    origin: "http://localhost:5173"
-  })
-);
+app.use(cors({
+  origin: "http://localhost:5173",
+  methods: ["GET", "POST"]
+}));
 
 app.use(express.json());
 
@@ -30,10 +29,14 @@ const io = new Server(server, {
 // Initialize our socket event handlers
 socketHandler(io);
 
+
 app.get("/", (req, res) => {
+
   res.json({
-    message: "SyncSpace backend is running"
+    status: "online",
+    message: "SyncSpace server is running"
   });
+
 });
 
 // Using Port 5001 to avoid macOS AirPlay conflict

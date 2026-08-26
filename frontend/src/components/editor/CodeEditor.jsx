@@ -3,112 +3,106 @@ import React, {
   useState
 } from "react";
 
-import Editor from
-  "@monaco-editor/react";
+import Editor from "@monaco-editor/react";
 
 import {
-  useSocket
-} from "../../context/SocketContext";
+  socket,
+  connectToServer
+} from "../../services/socket";
 
 import "./editor.css";
 
 
-function CodeEditor() {
+function CodeEditor({
+  roomId = "syncspace-demo",
+  userName = "Guest"
+}) {
 
-  const socket =
-    useSocket();
 
+  const [code, setCode] = useState(
+`// Welcome to SyncSpace
 
-  const [code, setCode] =
-    useState(
-`// Start collaborating here
-
-console.log("Hello from SyncSpace");`
-    );
+console.log("Start collaborating!");`
+  );
 
 
   const [language, setLanguage] =
     useState("javascript");
 
 
-  const roomId =
-    "syncspace-demo";
-
-
-  const [userName] =
-    useState(() => {
-
-      const savedName =
-        localStorage.getItem(
-          "syncspace-user-name"
-        );
-
-      return (
-        savedName ||
-        "Anonymous User"
-      );
-
-    });
+  const [connected, setConnected] =
+    useState(false);
 
 
   useEffect(() => {
 
-    if (!socket) {
-      return;
-    }
+
+    const handleConnect = () => {
+
+      setConnected(true);
 
 
-    const joinRoom = () => {
-
-      socket.emit(
-        "join-room",
-        {
-          roomId,
-          userName
-        }
+      connectToServer(
+        roomId,
+        userName
       );
+
 
     };
 
 
-    if (socket.connected) {
+    const handleDisconnect = () => {
 
-      joinRoom();
+      setConnected(false);
 
-    } else {
-
-      socket.on(
-        "connect",
-        joinRoom
-      );
-
-    }
+    };
 
 
-    const handleCodeChange =
-      ({
-        code: updatedCode,
-        language: updatedLanguage
-      }) => {
-
-        if (
-          updatedCode !== undefined
-        ) {
-
-          setCode(updatedCode);
-
-        }
+    const handleCodeChange = ({
+      code: updatedCode,
+      language: updatedLanguage
+    }) => {
 
 
-        if (updatedLanguage) {
+      if (
+        updatedCode !== undefined
+      ) {
 
-          setLanguage(
-            updatedLanguage
-          );
+        setCode(
+          updatedCode
+        );
 
-        }
+      }
 
-      };
+
+      if (
+        updatedLanguage
+      ) {
+
+        setLanguage(
+          updatedLanguage
+        );
+
+      }
+
+
+    };
+
+
+    /*
+      Listen before connecting
+    */
+
+    socket.on(
+      "connect",
+      handleConnect
+    );
+
+
+    socket.on(
+      "disconnect",
+      handleDisconnect
+    );
 
 
     socket.on(
@@ -117,113 +111,258 @@ console.log("Hello from SyncSpace");`
     );
 
 
+    /*
+      If socket is already connected,
+      directly join the room.
+    */
+
+    if (socket.connected) {
+
+      setConnected(true);
+
+
+      connectToServer(
+        roomId,
+        userName
+      );
+
+    } else {
+
+      socket.connect();
+
+    }
+
+
     return () => {
+
 
       socket.off(
         "connect",
-        joinRoom
+        handleConnect
       );
+
+
+      socket.off(
+        "disconnect",
+        handleDisconnect
+      );
+
 
       socket.off(
         "code-change",
         handleCodeChange
       );
 
+
     };
 
+
   }, [
-    socket,
+    roomId,
     userName
   ]);
 
 
-  function handleEditorChange(
-    value
-  ) {
 
-    const newCode =
-      value || "";
+  const handleCodeChange =
+    (value) => {
 
 
-    setCode(newCode);
+      const newCode =
+        value || "";
 
 
-    socket?.emit(
-      "code-change",
-      {
-        roomId,
-        code: newCode,
-        language
+      setCode(
+        newCode
+      );
+
+
+      if (socket.connected) {
+
+        socket.emit(
+          "code-change",
+          {
+
+            roomId,
+
+            code:
+              newCode,
+
+            language
+
+          }
+        );
+
       }
-    );
-
-  }
 
 
-  function handleLanguageChange(
-    event
-  ) {
-
-    const newLanguage =
-      event.target.value;
+    };
 
 
-    setLanguage(
-      newLanguage
-    );
+
+  const handleLanguageChange =
+    (event) => {
 
 
-    socket?.emit(
-      "code-change",
-      {
-        roomId,
-        code,
-        language: newLanguage
+      const newLanguage =
+        event.target.value;
+
+
+      setLanguage(
+        newLanguage
+      );
+
+
+      if (socket.connected) {
+
+        socket.emit(
+          "code-change",
+          {
+
+            roomId,
+
+            code,
+
+            language:
+              newLanguage
+
+          }
+        );
+
       }
+
+
+    };
+
+
+
+  const exportCode = () => {
+
+
+    const fileExtension =
+      {
+
+        javascript: "js",
+
+        python: "py",
+
+        java: "java",
+
+        cpp: "cpp",
+
+        html: "html",
+
+        css: "css"
+
+      }[language] || "txt";
+
+
+    const blob =
+      new Blob(
+        [code],
+        {
+          type:
+            "text/plain"
+        }
+      );
+
+
+    const url =
+      URL.createObjectURL(
+        blob
+      );
+
+
+    const link =
+      document.createElement(
+        "a"
+      );
+
+
+    link.href =
+      url;
+
+
+    link.download =
+      `syncspace-code.${fileExtension}`;
+
+
+    document.body.appendChild(
+      link
     );
 
-  }
+
+    link.click();
+
+
+    document.body.removeChild(
+      link
+    );
+
+
+    URL.revokeObjectURL(
+      url
+    );
+
+
+  };
+
 
 
   return (
 
-    <div className="editor-wrapper">
-
-      <div className="editor-header">
-
-        <div>
-
-          <h2>
-            Collaborative Editor
-          </h2>
-
-          <p>
-            Real-time code synchronization
-          </p>
-
-        </div>
+    <div className="code-editor-wrapper">
 
 
-        <div className="editor-controls">
+      {/* Editor Toolbar */}
 
-          <div className="connection-status">
+      <div className="editor-toolbar">
 
-            <span
-              className={
-                socket?.connected
-                  ? "status-dot connected"
-                  : "status-dot"
-              }
-            />
 
-            {socket?.connected
-              ? "Connected"
-              : "Connecting"}
+        <div className="editor-status">
+
+
+          <span
+            className={
+              connected
+                ? "connection-dot connected"
+                : "connection-dot"
+            }
+          >
+          </span>
+
+
+          <div className="connection-info">
+
+
+            <span className="connection-text">
+
+              {connected
+                ? "Connected"
+                : "Connecting..."}
+
+            </span>
+
+
+            <span className="connection-room">
+
+              Room: {roomId}
+
+            </span>
+
 
           </div>
 
 
+        </div>
+
+
+
+        <div className="editor-actions">
+
+
           <select
+            className="language-select"
             value={language}
             onChange={
               handleLanguageChange
@@ -256,12 +395,29 @@ console.log("Hello from SyncSpace");`
 
           </select>
 
+
+
+          <button
+            className="export-code-button"
+            onClick={exportCode}
+          >
+
+            ↓ Export
+
+          </button>
+
+
         </div>
+
 
       </div>
 
 
-      <div className="editor-container">
+
+      {/* Monaco Editor */}
+
+      <div className="monaco-wrapper">
+
 
         <Editor
 
@@ -272,34 +428,95 @@ console.log("Hello from SyncSpace");`
           value={code}
 
           onChange={
-            handleEditorChange
+            handleCodeChange
           }
 
           theme="vs-dark"
 
           options={{
 
-            fontSize: 15,
-
             minimap: {
               enabled: false
             },
 
-            automaticLayout: true,
+
+            fontSize: 14,
+
+
+            fontFamily:
+              "Consolas, monospace",
+
 
             padding: {
-              top: 16
-            }
+              top: 18,
+              bottom: 18
+            },
+
+
+            smoothScrolling: true,
+
+
+            cursorSmoothCaretAnimation:
+              "on",
+
+
+            scrollBeyondLastLine:
+              false,
+
+
+            automaticLayout: true,
+
+
+            lineNumbers:
+              "on",
+
+
+            roundedSelection:
+              true,
+
+
+            cursorBlinking:
+              "smooth",
+
+
+            wordWrap:
+              "on"
+
 
           }}
 
         />
 
+
       </div>
+
+
+      {/* Bottom Status */}
+
+      <div className="editor-footer">
+
+
+        <span>
+
+          👤 {userName}
+
+        </span>
+
+
+        <span>
+
+          ⚡ Real-time code sync
+
+        </span>
+
+
+      </div>
+
 
     </div>
 
   );
+
 
 }
 

@@ -1,7 +1,8 @@
 import React, {
   useEffect,
   useRef,
-  useState
+  useState,
+  useCallback
 } from "react";
 
 import {
@@ -9,82 +10,109 @@ import {
   Layer,
   Line,
   Rect,
-  Text,
-  Circle
+  Text
 } from "react-konva";
 
 import Toolbar from "./Toolbar";
 
 import {
-  useSocket
-} from "../../context/SocketContext";
+  socket,
+  connectToServer
+} from "../../services/socket";
+
+import { sharedState } from "../../yjs/yjsClient";
 
 import "./whiteboard.css";
 
 
-function Whiteboard() {
+function Whiteboard({
+  roomId = "syncspace-demo",
+  userName = `User-${Math.floor(Math.random() * 1000)}`
+}) {
 
-  const socket = useSocket();
 
   const stageRef = useRef(null);
 
-  const containerRef = useRef(null);
+  const drawingRef = useRef(false);
+
+  const currentShapeRef = useRef(null);
+
+  const remoteShapesRef = useRef([]);
+
+  const animationFrameRef = useRef(null);
 
 
-  const [roomId] =
-    useState("syncspace-demo");
-
-
-  const [userName] =
-    useState(() => {
-
-      const savedName =
-        localStorage.getItem(
-          "syncspace-user-name"
-        );
-
-      if (savedName) {
-        return savedName;
-      }
-
-      const newName =
-        `User-${Math.floor(
-          Math.random() * 1000
-        )}`;
-
-      localStorage.setItem(
-        "syncspace-user-name",
-        newName
-      );
-
-      return newName;
-
-    });
+  const [shapes, setShapes] =
+    useState([]);
 
 
   const [tool, setTool] =
     useState("pen");
 
+
   const [color, setColor] =
     useState("#2563eb");
 
-  const [shapes, setShapes] =
-    useState([]);
-
-  const [users, setUsers] =
-    useState([]);
-
-  const [isDrawing, setIsDrawing] =
-    useState(false);
-
-  const [startPoint, setStartPoint] =
-    useState(null);
 
   const [stageSize, setStageSize] =
     useState({
       width: 800,
-      height: 500
+      height: 600
     });
+
+
+  const [connectedUsers, setConnectedUsers] =
+    useState([]);
+
+
+  const [connected, setConnected] =
+    useState(false);
+
+
+  /*
+    YJS STATE SYNCHRONIZATION
+  */
+
+  useEffect(() => {
+
+    const loadShapesFromYjs = () => {
+
+      const savedShapes =
+        sharedState.get("shapes");
+
+      if (Array.isArray(savedShapes)) {
+
+        setShapes(savedShapes);
+
+      }
+
+    };
+
+
+    loadShapesFromYjs();
+
+
+    const handleYjsChange = () => {
+
+      loadShapesFromYjs();
+
+    };
+
+
+    sharedState.observe(
+      handleYjsChange
+    );
+
+
+    return () => {
+
+      sharedState.unobserve(
+        handleYjsChange
+      );
+
+    };
+
+  }, []);
 
 
   /*
@@ -93,343 +121,26 @@ function Whiteboard() {
 
   useEffect(() => {
 
-    if (!socket) {
-      return;
-    }
-
-
-    const joinRoom = () => {
-
-      socket.emit(
-        "join-room",
-        {
-          roomId,
-          userName
-        }
-      );
-
-    };
-
-
-    if (socket.connected) {
-
-      joinRoom();
-
-    } else {
-
-      socket.on(
-        "connect",
-        joinRoom
-      );
-
-    }
-
-
-    return () => {
-
-      socket.off(
-        "connect",
-        joinRoom
-      );
-
-    };
-
-  }, [
-    socket,
-    roomId,
-    userName
-  ]);
-
-
-  /*
-    USER LIST
-  */
-
-  useEffect(() => {
-
-    if (!socket) {
-      return;
-    }
-
-
-    const handleRoomUsers =
-      (roomUsers) => {
-
-        setUsers(
-          Array.isArray(roomUsers)
-            ? roomUsers
-            : []
-        );
-
-      };
-
-
-    const handleUserJoined =
-      (user) => {
-
-        if (!user) {
-          return;
-        }
-
-        setUsers(
-          (previousUsers) => {
-
-            const exists =
-              previousUsers.some(
-                (item) =>
-                  item.id === user.id
-              );
-
-            if (exists) {
-              return previousUsers;
-            }
-
-            return [
-              ...previousUsers,
-              user
-            ];
-
-          }
-        );
-
-      };
-
-
-    const handleUserLeft =
-      ({ id }) => {
-
-        setUsers(
-          (previousUsers) =>
-            previousUsers.filter(
-              (user) =>
-                user.id !== id
-            )
-        );
-
-      };
-
-
-    socket.on(
-      "room-users",
-      handleRoomUsers
-    );
-
-    socket.on(
-      "user-joined",
-      handleUserJoined
-    );
-
-    socket.on(
-      "user-left",
-      handleUserLeft
-    );
-
-
-    return () => {
-
-      socket.off(
-        "room-users",
-        handleRoomUsers
-      );
-
-      socket.off(
-        "user-joined",
-        handleUserJoined
-      );
-
-      socket.off(
-        "user-left",
-        handleUserLeft
-      );
-
-    };
-
-  }, [socket]);
-
-
-  /*
-    REMOTE DRAWING
-  */
-
-  useEffect(() => {
-
-    if (!socket) {
-      return;
-    }
-
-
-    const handleRemoteDrawing =
-      ({ shape }) => {
-
-        if (!shape) {
-          return;
-        }
-
-        setShapes(
-          (previousShapes) => {
-
-            const exists =
-              previousShapes.some(
-                (item) =>
-                  item.id === shape.id
-              );
-
-            if (exists) {
-              return previousShapes;
-            }
-
-            return [
-              ...previousShapes,
-              shape
-            ];
-
-          }
-        );
-
-      };
-
-
-    socket.on(
-      "whiteboard-draw",
-      handleRemoteDrawing
-    );
-
-
-    return () => {
-
-      socket.off(
-        "whiteboard-draw",
-        handleRemoteDrawing
-      );
-
-    };
-
-  }, [socket]);
-
-
-  /*
-    REMOTE CLEAR
-  */
-
-  useEffect(() => {
-
-    if (!socket) {
-      return;
-    }
-
-
-    const handleRemoteClear = () => {
-
-      setShapes([]);
-
-    };
-
-
-    socket.on(
-      "whiteboard-clear",
-      handleRemoteClear
-    );
-
-
-    return () => {
-
-      socket.off(
-        "whiteboard-clear",
-        handleRemoteClear
-      );
-
-    };
-
-  }, [socket]);
-
-
-  /*
-    REMOTE CURSOR
-  */
-
-  useEffect(() => {
-
-    if (!socket) {
-      return;
-    }
-
-
-    const handleCursorMove =
-      ({
-        id,
-        name,
-        x,
-        y
-      }) => {
-
-        setUsers(
-          (previousUsers) =>
-            previousUsers.map(
-              (user) => {
-
-                if (
-                  user.id === id
-                ) {
-
-                  return {
-                    ...user,
-                    name,
-                    x,
-                    y
-                  };
-
-                }
-
-                return user;
-
-              }
-            )
-        );
-
-      };
-
-
-    socket.on(
-      "cursor-move",
-      handleCursorMove
-    );
-
-
-    return () => {
-
-      socket.off(
-        "cursor-move",
-        handleCursorMove
-      );
-
-    };
-
-  }, [socket]);
-
-
-  /*
-    RESPONSIVE CANVAS
-  */
-
-  useEffect(() => {
 
     const updateSize = () => {
 
-      if (!containerRef.current) {
+
+      const container =
+        document.querySelector(
+          ".canvas-container"
+        );
+
+
+      if (!container) {
         return;
       }
 
+
       setStageSize({
-
-        width:
-          containerRef.current
-            .clientWidth,
-
-        height:
-          containerRef.current
-            .clientHeight
-
+        width: container.clientWidth,
+        height: container.clientHeight
       });
+
 
     };
 
@@ -452,366 +163,784 @@ function Whiteboard() {
 
     };
 
+
   }, []);
 
 
-  function getPointerPosition() {
-
-    if (!stageRef.current) {
-      return null;
-    }
-
-    return stageRef.current
-      .getPointerPosition();
-
-  }
-
 
   /*
-    MOUSE DOWN
+    Connect to Socket Server
   */
 
-  function handleMouseDown() {
-
-    const position =
-      getPointerPosition();
-
-    if (!position) {
-      return;
-    }
+  useEffect(() => {
 
 
-    if (tool === "pen") {
+    connectToServer(
+      roomId,
+      userName
+    );
 
-      setIsDrawing(true);
 
-      const newLine = {
+    const handleConnect = () => {
 
-        id:
-          `${socket?.id}-${Date.now()}-${Math.random()}`,
+      setConnected(true);
 
-        type: "line",
+    };
 
-        points: [
-          position.x,
-          position.y
-        ],
 
-        stroke: color,
+    const handleDisconnect = () => {
 
-        strokeWidth: 3
+      setConnected(false);
+
+    };
+
+
+    const handleRoomUsers =
+      (users) => {
+
+
+        const validUsers =
+          Array.isArray(users)
+            ? users.filter(
+                (user) =>
+                  user &&
+                  user.id
+              )
+            : [];
+
+
+        setConnectedUsers(
+          validUsers
+        );
+
 
       };
 
 
-      setShapes(
-        (previousShapes) => [
-          ...previousShapes,
-          newLine
-        ]
-      );
+    const handleUserJoined =
+      (user) => {
 
-      return;
+
+        if (
+          !user ||
+          !user.id
+        ) {
+          return;
+        }
+
+
+        setConnectedUsers(
+          (previousUsers) => {
+
+
+            const safeUsers =
+              Array.isArray(previousUsers)
+                ? previousUsers.filter(
+                    (existingUser) =>
+                      existingUser &&
+                      existingUser.id
+                  )
+                : [];
+
+
+            const alreadyExists =
+              safeUsers.some(
+                (existingUser) =>
+                  existingUser.id ===
+                  user.id
+              );
+
+
+            if (alreadyExists) {
+              return safeUsers;
+            }
+
+
+            return [
+              ...safeUsers,
+              user
+            ];
+
+
+          }
+        );
+
+
+      };
+
+
+    const handleUserLeft =
+      ({ id }) => {
+
+
+        if (!id) {
+          return;
+        }
+
+
+        setConnectedUsers(
+          (previousUsers) => {
+
+
+            const safeUsers =
+              Array.isArray(previousUsers)
+                ? previousUsers
+                : [];
+
+
+            return safeUsers.filter(
+              (user) =>
+                user &&
+                user.id &&
+                user.id !== id
+            );
+
+
+          }
+        );
+
+
+      };
+
+
+    const handleWhiteboardDraw =
+      ({ shape }) => {
+
+
+        if (!shape) {
+          return;
+        }
+
+
+        setShapes(
+          (previousShapes) => [
+
+            ...previousShapes,
+            shape
+
+          ]
+        );
+
+
+      };
+
+
+    const handleWhiteboardClear =
+      () => {
+
+
+        setShapes([]);
+
+
+      };
+
+
+    socket.on(
+      "connect",
+      handleConnect
+    );
+
+
+    socket.on(
+      "disconnect",
+      handleDisconnect
+    );
+
+
+    socket.on(
+      "room-users",
+      handleRoomUsers
+    );
+
+
+    socket.on(
+      "user-joined",
+      handleUserJoined
+    );
+
+
+    socket.on(
+      "user-left",
+      handleUserLeft
+    );
+
+
+    socket.on(
+      "whiteboard-draw",
+      handleWhiteboardDraw
+    );
+
+
+    socket.on(
+      "whiteboard-clear",
+      handleWhiteboardClear
+    );
+
+
+    if (socket.connected) {
+
+      setConnected(true);
 
     }
 
 
-    setStartPoint(position);
+    return () => {
 
-  }
+
+      socket.off(
+        "connect",
+        handleConnect
+      );
+
+
+      socket.off(
+        "disconnect",
+        handleDisconnect
+      );
+
+
+      socket.off(
+        "room-users",
+        handleRoomUsers
+      );
+
+
+      socket.off(
+        "user-joined",
+        handleUserJoined
+      );
+
+
+      socket.off(
+        "user-left",
+        handleUserLeft
+      );
+
+
+      socket.off(
+        "whiteboard-draw",
+        handleWhiteboardDraw
+      );
+
+
+      socket.off(
+        "whiteboard-clear",
+        handleWhiteboardClear
+      );
+
+
+    };
+
+
+  }, [
+    roomId,
+    userName
+  ]);
+
 
 
   /*
-    MOUSE MOVE
+    Start Drawing
   */
 
-  function handleMouseMove() {
+  const handleMouseDown =
+    useCallback((event) => {
 
-    const position =
-      getPointerPosition();
-
-    if (!position) {
-      return;
-    }
+            const updatedShapes = [
+              ...previousShapes,
+              shape
+            ];
 
 
-    /*
-      SEND CURSOR
-    */
+            sharedState.set(
+              "shapes",
+              updatedShapes
+            );
 
-    if (socket?.connected) {
 
-      socket.emit(
-        "cursor-move",
-        {
-          roomId,
-          x: position.x,
-          y: position.y
-        }
+            return updatedShapes;
+
+          }
+        );
+
+
+      const pointer =
+        stage.getPointerPosition();
+
+
+      if (!pointer) {
+        return;
+      }
+
+
+      drawingRef.current = true;
+
+
+      let newShape;
+
+
+      if (tool === "pen") {
+
+
+        newShape = {
+
+          id:
+            `${socket.id}-${Date.now()}`,
+
+
+      sharedState.set(
+        "shapes",
+        []
       );
 
-    }
-
-
-    /*
-      PEN DRAWING
-    */
-
-    if (
-      !isDrawing ||
-      tool !== "pen"
-    ) {
-      return;
-    }
-
-
-    setShapes(
-      (previousShapes) => {
-
-        if (
-          previousShapes.length === 0
-        ) {
-          return previousShapes;
-        }
-
-
-        const updatedShapes =
-          [...previousShapes];
-
-        const lastIndex =
-          updatedShapes.length - 1;
-
-        const lastShape =
-          updatedShapes[lastIndex];
-
-
-        if (
-          !lastShape ||
-          lastShape.type !== "line"
-        ) {
-          return previousShapes;
-        }
-
-
-        updatedShapes[lastIndex] = {
-
-          ...lastShape,
+    };
 
           points: [
-            ...lastShape.points,
-            position.x,
-            position.y
-          ]
+            pointer.x,
+            pointer.y
+          ],
+
+          color,
+
+          strokeWidth: 3
 
         };
 
 
-        return updatedShapes;
+      }
+
+
+      else if (
+        tool === "rectangle"
+      ) {
+
+
+        newShape = {
+
+          id:
+            `${socket.id}-${Date.now()}`,
+
+          type: "rectangle",
+
+          x:
+            pointer.x,
+
+          y:
+            pointer.y,
+
+          width: 0,
+
+          height: 0,
+
+          color
+
+        };
+
 
       }
-    );
-
-  }
 
 
-  /*
-    MOUSE UP
-  */
+      else if (
+        tool === "text"
+      ) {
 
-  function handleMouseUp() {
 
-    if (tool === "pen") {
+        const text =
+          window.prompt(
+            "Enter your text"
+          );
 
-      setIsDrawing(false);
+
+        if (!text) {
+
+          drawingRef.current =
+            false;
+
+          return;
+
+        }
+
+
+        newShape = {
+
+          id:
+            `${socket.id}-${Date.now()}`,
+
+          type: "text",
+
+          x:
+            pointer.x,
+
+          y:
+            pointer.y,
+
+          text,
+
+          color
+
+        };
+
+
+        drawingRef.current =
+          false;
+
+
+        setShapes(
+          (previousShapes) => [
+
+            ...previousShapes,
+
+            newShape
+
+          ]
+        );
+
+
+        socket.emit(
+          "whiteboard-draw",
+          {
+
+            roomId,
+
+            shape:
+              newShape
+
+          }
+        );
+
+
+        return;
+
+      }
+
+
+      currentShapeRef.current =
+        newShape;
 
 
       setShapes(
-        (currentShapes) => {
+        (previousShapes) => [
 
-          const lastShape =
-            currentShapes[
-              currentShapes.length - 1
-            ];
+          ...previousShapes,
+
+          newShape
+
+        ]
+      );
+
+
+    }, [
+      tool,
+      color,
+      roomId
+    ]);
+
+
+
+  /*
+    Drawing Movement
+
+    Optimized with requestAnimationFrame
+    to reduce lag.
+  */
+
+  const handleMouseMove =
+    useCallback((event) => {
+
+
+      if (
+        !drawingRef.current ||
+        !currentShapeRef.current
+      ) {
+        return;
+      }
+
+
+      if (
+        animationFrameRef.current
+      ) {
+        return;
+      }
+
+
+      animationFrameRef.current =
+        requestAnimationFrame(
+          () => {
+
+
+            const stage =
+              event.target.getStage();
+
+
+            const pointer =
+              stage.getPointerPosition();
+
+
+            if (!pointer) {
+
+              animationFrameRef.current =
+                null;
+
+              return;
+
+            }
+
+
+            setShapes(
+              (previousShapes) => {
+
+
+                const safeShapes =
+                  Array.isArray(
+                    previousShapes
+                  )
+                    ? previousShapes
+                    : [];
+
+
+                const updatedShapes =
+                  [...safeShapes];
+
+
+                const currentShape =
+                  currentShapeRef.current;
+
+
+                if (!currentShape) {
+
+                  return updatedShapes;
+
+                }
+
+
+                const index =
+                  updatedShapes.findIndex(
+                    (shape) =>
+                      shape &&
+                      shape.id ===
+                      currentShape.id
+                  );
+
+
+                if (index === -1) {
+
+                  return updatedShapes;
+
+                }
+
+
+                const shape =
+                  {
+                    ...updatedShapes[index]
+                  };
+
+
+                if (
+                  shape.type === "pen"
+                ) {
+
+
+                  shape.points = [
+
+                    ...shape.points,
+
+                    pointer.x,
+
+                    pointer.y
+
+                  ];
+
+
+                }
+
 
           if (
             socket?.connected &&
             lastShape
           ) {
 
-            socket.emit(
-              "whiteboard-draw",
-              {
-                roomId,
-                shape: lastShape
-              }
-            );
+                else if (
+                  shape.type ===
+                  "rectangle"
+                ) {
 
-          }
+
+
+          sharedState.set(
+            "shapes",
+            [...currentShapes]
+          );
+
 
           return currentShapes;
 
-        }
-      );
+
+                  shape.height =
+                    pointer.y -
+                    shape.y;
 
 
-      return;
-
-    }
+                }
 
 
-    const position =
-      getPointerPosition();
-
-    if (
-      !position ||
-      !startPoint
-    ) {
-
-      setStartPoint(null);
-
-      return;
-
-    }
+                updatedShapes[index] =
+                  shape;
 
 
-    /*
-      RECTANGLE
-    */
-
-    if (
-      tool === "rectangle"
-    ) {
-
-      const rectangle = {
-
-        id:
-          `${socket?.id}-${Date.now()}-${Math.random()}`,
-
-        type: "rectangle",
-
-        x:
-          Math.min(
-            startPoint.x,
-            position.x
-          ),
-
-        y:
-          Math.min(
-            startPoint.y,
-            position.y
-          ),
-
-        width:
-          Math.abs(
-            position.x -
-            startPoint.x
-          ),
-
-        height:
-          Math.abs(
-            position.y -
-            startPoint.y
-          ),
-
-        stroke: color,
-
-        strokeWidth: 3
-
-      };
+                currentShapeRef.current =
+                  shape;
 
 
-      setShapes(
-        (previousShapes) => [
-          ...previousShapes,
-          rectangle
-        ]
-      );
+                return updatedShapes;
 
 
-      socket?.emit(
-        "whiteboard-draw",
-        {
-          roomId,
-          shape: rectangle
-        }
-      );
-
-    }
+              }
+            );
 
 
-    /*
-      TEXT
-    */
-
-    if (
-      tool === "text"
-    ) {
-
-      const textValue =
-        window.prompt(
-          "Enter your text"
-        );
+            animationFrameRef.current =
+              null;
 
 
-      if (
-        textValue &&
-        textValue.trim()
-      ) {
-
-        const textShape = {
-
-          id:
-            `${socket?.id}-${Date.now()}-${Math.random()}`,
-
-          type: "text",
-
-          x: startPoint.x,
-
-          y: startPoint.y,
-
-          text:
-            textValue.trim(),
-
-          fill: color,
-
-          fontSize: 22
-
-        };
-
-
-        setShapes(
-          (previousShapes) => [
-            ...previousShapes,
-            textShape
-          ]
-        );
-
-
-        socket?.emit(
-          "whiteboard-draw",
-          {
-            roomId,
-            shape: textShape
           }
         );
 
-      }
 
-    }
+    }, []);
 
-
-    setStartPoint(null);
-
-  }
 
 
   /*
-    CLEAR
+    Finish Drawing
   */
 
-  function clearCanvas() {
+  const handleMouseUp =
+    useCallback(() => {
 
-    setShapes([]);
+
+      if (
+        !drawingRef.current ||
+        !currentShapeRef.current
+      ) {
+        return;
+      }
+
+      setShapes(
+        (previousShapes) => {
+
+          const updatedShapes = [
+            ...previousShapes,
+            rectangle
+          ];
+
+
+          sharedState.set(
+            "shapes",
+            updatedShapes
+          );
+
+
+          return updatedShapes;
+
+        }
+      );
+
+      drawingRef.current =
+        false;
+
+
+      const completedShape =
+        currentShapeRef.current;
+
+
+      currentShapeRef.current =
+        null;
+
+
+      /*
+        Send only when drawing
+        is completed.
+
+        This prevents hundreds of
+        socket events while using pen.
+      */
+
+      socket.emit(
+        "whiteboard-draw",
+        {
+
+          roomId,
+
+          shape:
+            completedShape
+
+        }
+      );
+
+
+    }, [
+      roomId
+    ]);
+
+
+
+  /*
+    Clear Canvas
+  */
+
+  const clearCanvas =
+    useCallback(() => {
+
+
+        setShapes(
+          (previousShapes) => {
+
+            const updatedShapes = [
+              ...previousShapes,
+              textShape
+            ];
+
+
+            sharedState.set(
+              "shapes",
+              updatedShapes
+            );
+
+
+            return updatedShapes;
+
+          }
+        );
+
+
+      socket.emit(
+        "whiteboard-clear",
+        {
+
+          roomId
+
+        }
+      );
+
+
+    }, [
+      roomId
+    ]);
+
+
+
+  /*
+    Render Shapes
+  */
+
+  const renderShape =
+    (shape) => {
+
+
+    sharedState.set(
+      "shapes",
+      []
+    );
 
 
     socket?.emit(
@@ -819,14 +948,143 @@ function Whiteboard() {
       {
         roomId
       }
-    );
 
-  }
+
+      if (
+        shape.type === "pen"
+      ) {
+
+
+        return (
+
+          <Line
+
+            key={shape.id}
+
+            points={
+              shape.points || []
+            }
+
+            stroke={
+              shape.color ||
+              "#2563eb"
+            }
+
+            strokeWidth={
+              shape.strokeWidth || 3
+            }
+
+            lineCap="round"
+
+            lineJoin="round"
+
+            tension={0.3}
+
+          />
+
+        );
+
+
+      }
+
+
+      if (
+        shape.type ===
+        "rectangle"
+      ) {
+
+
+        return (
+
+          <Rect
+
+            key={shape.id}
+
+            x={shape.x}
+
+            y={shape.y}
+
+            width={shape.width}
+
+            height={shape.height}
+
+            stroke={
+              shape.color ||
+              "#2563eb"
+            }
+
+            strokeWidth={3}
+
+            cornerRadius={4}
+
+          />
+
+        );
+
+
+      }
+
+
+      if (
+        shape.type === "text"
+      ) {
+
+
+        return (
+
+          <Text
+
+            key={shape.id}
+
+            x={shape.x}
+
+            y={shape.y}
+
+            text={shape.text}
+
+            fontSize={20}
+
+            fill={
+              shape.color ||
+              "#111827"
+            }
+
+          />
+
+        );
+
+
+      }
+
+
+      return null;
+
+
+    };
+
+
+
+  /*
+    Count Users Safely
+
+    Current user + valid remote users
+  */
+
+  const totalUsers =
+    1 +
+    connectedUsers.filter(
+      (user) =>
+        user &&
+        user.id &&
+        user.id !== socket.id
+    ).length;
+
 
 
   return (
 
     <div className="whiteboard-container">
+
 
       <Toolbar
 
@@ -838,19 +1096,26 @@ function Whiteboard() {
 
         setColor={setColor}
 
-        clearCanvas={clearCanvas}
+        clearCanvas={
+          clearCanvas
+        }
 
         connectedUsers={
-          users.length
+          totalUsers
+        }
+
+        connected={
+          connected
         }
 
       />
 
 
+
       <div
         className="canvas-container"
-        ref={containerRef}
       >
+
 
         <Stage
 
@@ -876,192 +1141,42 @@ function Whiteboard() {
             handleMouseUp
           }
 
+          onTouchStart={
+            handleMouseDown
+          }
+
+          onTouchMove={
+            handleMouseMove
+          }
+
+          onTouchEnd={
+            handleMouseUp
+          }
+
         >
+
 
           <Layer>
 
+
             {shapes.map(
-              (shape) => {
-
-                if (
-                  shape.type === "line"
-                ) {
-
-                  return (
-
-                    <Line
-
-                      key={shape.id}
-
-                      points={
-                        shape.points
-                      }
-
-                      stroke={
-                        shape.stroke
-                      }
-
-                      strokeWidth={
-                        shape.strokeWidth
-                      }
-
-                      lineCap="round"
-
-                      lineJoin="round"
-
-                    />
-
-                  );
-
-                }
-
-
-                if (
-                  shape.type ===
-                  "rectangle"
-                ) {
-
-                  return (
-
-                    <Rect
-
-                      key={shape.id}
-
-                      x={shape.x}
-
-                      y={shape.y}
-
-                      width={
-                        shape.width
-                      }
-
-                      height={
-                        shape.height
-                      }
-
-                      stroke={
-                        shape.stroke
-                      }
-
-                      strokeWidth={
-                        shape.strokeWidth
-                      }
-
-                      cornerRadius={4}
-
-                    />
-
-                  );
-
-                }
-
-
-                if (
-                  shape.type === "text"
-                ) {
-
-                  return (
-
-                    <Text
-
-                      key={shape.id}
-
-                      x={shape.x}
-
-                      y={shape.y}
-
-                      text={
-                        shape.text
-                      }
-
-                      fill={
-                        shape.fill
-                      }
-
-                      fontSize={
-                        shape.fontSize
-                      }
-
-                    />
-
-                  );
-
-                }
-
-
-                return null;
-
-              }
+              renderShape
             )}
 
-
-            {users.map(
-              (user) => {
-
-                if (
-                  user.id === socket?.id ||
-                  user.x === null ||
-                  user.y === null
-                ) {
-                  return null;
-                }
-
-
-                return (
-
-                  <React.Fragment
-                    key={user.id}
-                  >
-
-                    <Circle
-
-                      x={user.x}
-
-                      y={user.y}
-
-                      radius={6}
-
-                      fill="#2563eb"
-
-                    />
-
-
-                    <Text
-
-                      x={
-                        user.x + 10
-                      }
-
-                      y={
-                        user.y - 20
-                      }
-
-                      text={
-                        user.name
-                      }
-
-                      fontSize={13}
-
-                      fill="#1e40af"
-
-                    />
-
-                  </React.Fragment>
-
-                );
-
-              }
-            )}
 
           </Layer>
 
+
         </Stage>
 
+
       </div>
+
 
     </div>
 
   );
+
 
 }
 
