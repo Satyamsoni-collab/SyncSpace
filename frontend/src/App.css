@@ -158,19 +158,9 @@ body {
   border-color: #58a6ff;
 }
 
-<<<<<<< HEAD
 
 .panel-live {
 
-=======
-.join-room-container input:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-}
-
-/* --- Split Workspace --- */
-.workspace {
->>>>>>> feature/react-ui
   display: flex;
 
   align-items: center;
@@ -324,9 +314,8 @@ body {
   animation: spin 1s ease-in-out infinite;
 }
 
-@keyframes spin {
-  to { transform: rotate(360deg); }
-}
+/* =========================
+   RESPONSIVE
 
 /* --- Responsive Design (Tablets & Mobile) --- */
 @media (max-width: 768px) {
@@ -368,7 +357,6 @@ body {
   .nav-info {
     display: none; /* Hide room details on mobile to save space for logo and buttons */
   }
-<<<<<<< HEAD
 
 }
 
@@ -477,6 +465,4 @@ body {
     display: none;
   }
 
-=======
->>>>>>> feature/react-ui
 }
