@@ -8,46 +8,144 @@ export const socketHandler = (io) => {
   io.on('connection', (socket) => {
     console.log(`New client connected: ${socket.id}`);
 
-    // Handle a user joining a room
-    socket.on('join-room', (userParams) => {
-      // Expecting userParams to contain at least roomId
-      const roomId = userParams.roomId;
-      
-      // Add user to the in-memory room manager
-      const user = { socketId: socket.id, ...userParams };
-      joinRoom(roomId, user);
-      
-      // Join the actual socket.io room
-      socket.join(roomId);
-      
-      console.log(`User (${socket.id}) joined room: ${roomId}`);
+    /* ==============================
+       JOIN ROOM
+       ============================== */
+    socket.on('join-room', (userParams = {}) => {
+      try {
+        const { roomId, userName } = userParams;
 
-      // Emit an event to others in the room that a new user joined
-      socket.to(roomId).emit('user-joined', {
-        message: `A new user has joined the room.`,
-        user
-      });
-      
-      // Send the updated list of users to everyone in the room
-      io.to(roomId).emit('room-users', getUsersInRoom(roomId));
+        // Validation: Prevent crashes from empty payloads
+        if (!roomId || typeof roomId !== 'string') {
+          return socket.emit('error', { message: 'Invalid or missing roomId' });
+        }
+
+        // Setup socket data for persistent reference
+        socket.data.roomId = roomId;
+        socket.data.userName = userName || `User-${socket.id.substring(0, 5)}`;
+
+        // Construct standardized user object
+        const user = { 
+          socketId: socket.id, 
+          id: socket.id,       
+          name: socket.data.userName,
+          username: socket.data.userName,
+          x: null, 
+          y: null 
+        };
+
+        // Add to in-memory room manager
+        joinRoom(roomId, user);
+        
+        socket.join(roomId);
+        console.log(`${socket.data.userName} (${socket.id}) joined room: ${roomId}`);
+
+        // Notify other users
+        socket.to(roomId).emit('user-joined', user);
+        
+        // Send complete user list to everyone in room
+        io.to(roomId).emit('room-users', getUsersInRoom(roomId));
+
+      } catch (error) {
+        console.error(`[Error] join-room for ${socket.id}:`, error.message);
+      }
     });
 
-    // Handle a user disconnecting
-    socket.on('disconnect', () => {
-      console.log(`Client disconnected: ${socket.id}`);
-      
-      const result = leaveRoom(socket.id);
-      if (result) {
-        const { roomId, user } = result;
+    /* ==============================
+       WHITEBOARD DRAWING
+       ============================== */
+    socket.on('whiteboard-draw', (data = {}) => {
+      try {
+        const { roomId, shape } = data;
         
-        // Emit an event to the room that the user left
-        socket.to(roomId).emit('user-disconnected', {
-          message: `A user has left the room.`,
-          user
+        if (!roomId || !shape) return; 
+
+        socket.to(roomId).emit('whiteboard-draw', { shape });
+      } catch (error) {
+        console.error('[Error] whiteboard-draw:', error.message);
+      }
+    });
+
+    /* ==============================
+       CLEAR WHITEBOARD
+       ============================== */
+    socket.on('whiteboard-clear', (data = {}) => {
+      try {
+        const { roomId } = data;
+        if (!roomId) return;
+
+        socket.to(roomId).emit('whiteboard-clear');
+      } catch (error) {
+        console.error('[Error] whiteboard-clear:', error.message);
+      }
+    });
+
+    /* ==============================
+       CURSOR MOVEMENT
+       ============================== */
+    socket.on('cursor-move', (data = {}) => {
+      try {
+        const { roomId, x, y } = data;
+        
+        if (!roomId || x === undefined || y === undefined) return;
+
+        socket.to(roomId).emit('cursor-move', {
+          id: socket.id,
+          name: socket.data.userName,
+          x,
+          y
         });
+      } catch (error) {
+        console.error('[Error] cursor-move:', error.message);
+      }
+    });
+
+    /* ==============================
+       REAL-TIME CODE EDITOR
+       ============================== */
+    socket.on('code-change', (data = {}) => {
+      try {
+        const { roomId, code, language } = data;
         
-        // Update the room with the new user list
-        io.to(roomId).emit('room-users', getUsersInRoom(roomId));
+        if (!roomId || code === undefined) return;
+
+        socket.to(roomId).emit('code-change', { code, language });
+      } catch (error) {
+        console.error('[Error] code-change:', error.message);
+      }
+    });
+
+    /* ==============================
+       USER DISCONNECT
+       ============================== */
+    socket.on('disconnect', () => {
+      try {
+        console.log(`Client disconnected: ${socket.id}`);
+        
+        // 4. Memory Leak Prevention: 
+        // leaveRoom() accesses roomManager.js which actively checks and calls rooms.delete(roomId) 
+        // if the room size drops to 0. This guarantees memory is freed up.
+        const result = leaveRoom(socket.id);
+        
+        if (result) {
+          const { roomId, user } = result;
+          
+          socket.to(roomId).emit('user-left', { id: socket.id });
+
+          // Fallback legacy event
+          socket.to(roomId).emit('user-disconnected', { 
+            message: `${user?.name || 'A user'} has left the room.`, 
+            user 
+          });
+          
+          // Emit updated room-users list to everyone remaining
+          const remainingUsers = getUsersInRoom(roomId);
+          if (remainingUsers.length > 0) {
+            io.to(roomId).emit('room-users', remainingUsers);
+          }
+        }
+      } catch (error) {
+        console.error(`[Error] disconnect for ${socket.id}:`, error.message);
       }
     });
   });
