@@ -1373,6 +1373,16 @@ body {
 
 @media (max-width: 1100px) {
 
+  body {
+    overflow-y: auto;
+  }
+
+  .join-page {
+    min-height: 100vh;
+    overflow-y: auto;
+    overflow-x: hidden;
+  }
+
   .join-main {
 
     grid-template-columns: 1fr;
