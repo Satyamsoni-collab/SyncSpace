@@ -1,351 +1,1240 @@
+import "dotenv/config";
+
 import express from "express";
 import http from "http";
 import cors from "cors";
 import { Server } from "socket.io";
 
+import connectDatabase from "./config/database.js";
+
+import authRoutes from "./routes/authRoutes.js";
+
+import Workspace from "./models/Workspace.js";
+import WorkspaceEvent from "./models/WorkspaceEvent.js";
+
+
 const app = express();
-
-app.use(cors({
-  origin: "http://localhost:5173",
-  methods: ["GET", "POST"]
-}));
-
-app.use(express.json());
-
-const server = http.createServer(app);
-
-const io = new Server(server, {
-  cors: {
-    origin: "http://localhost:5173",
-    methods: ["GET", "POST"]
-  }
-});
-
-const PORT = 5000;
 
 
 /*
-  ROOM STRUCTURE
-
-  roomId -> {
-    users: Map,
-    code: "",
-    language: "javascript"
-  }
+  CONNECT DATABASE
 */
 
-const rooms = new Map();
+connectDatabase();
 
 
-app.get("/", (req, res) => {
+/*
+  MIDDLEWARE
+*/
 
-  res.json({
-    status: "online",
-    message: "SyncSpace server is running"
-  });
+app.use(
+  cors({
+    origin: "http://localhost:5173",
 
-});
+    methods: [
+      "GET",
+      "POST",
+      "PUT",
+      "DELETE"
+    ],
+
+    credentials: true
+  })
+);
 
 
-io.on("connection", (socket) => {
+app.use(
+  express.json()
+);
 
-  console.log("User connected:", socket.id);
+
+/*
+  AUTH ROUTES
+*/
+
+app.use(
+  "/api/auth",
+  authRoutes
+);
 
 
-  /*
-    JOIN ROOM
-  */
+/*
+  CREATE HTTP SERVER
+*/
 
-  socket.on("join-room", ({ roomId, userName }) => {
+const server =
+  http.createServer(app);
 
-    if (!roomId) {
-      return;
+
+/*
+  SOCKET.IO SERVER
+*/
+
+const io =
+  new Server(
+    server,
+    {
+      cors: {
+        origin:
+          "http://localhost:5173",
+
+        methods: [
+          "GET",
+          "POST"
+        ],
+
+        credentials: true
+      }
     }
+  );
 
 
-    socket.join(roomId);
+/*
+  PORT
+*/
 
-    socket.data.roomId = roomId;
-
-    socket.data.userName =
-      userName || "Guest";
+const PORT =
+  process.env.PORT || 5000;
 
 
-    if (!rooms.has(roomId)) {
+/*
+  DEFAULT CODE
+*/
 
-      rooms.set(roomId, {
-        users: new Map(),
-
-        code:
+const defaultCode =
 `// Start collaborating here
 
-console.log("Hello from SyncSpace");`,
+console.log("Hello from SyncSpace");`;
 
-        language: "javascript"
+
+/*
+  SERVER HEALTH CHECK
+*/
+
+app.get(
+  "/",
+
+  (req, res) => {
+
+    res.json({
+
+      status:
+        "online",
+
+      message:
+        "SyncSpace server is running"
+
+    });
+
+  }
+);
+
+
+/*
+  GET WORKSPACE EVENTS
+
+  Main route:
+  /api/workspace/:roomId/events
+
+  Example:
+  http://localhost:5000/api/workspace/102/events
+*/
+
+app.get(
+  "/api/workspace/:roomId/events",
+
+  async (req, res) => {
+
+    try {
+
+      const {
+        roomId
+      } = req.params;
+
+
+      const events =
+        await WorkspaceEvent
+          .find({
+            roomId
+          })
+          .sort({
+            createdAt: -1
+          });
+
+
+      res.status(200).json({
+
+        success:
+          true,
+
+        count:
+          events.length,
+
+        events
+
+      });
+
+    } catch (error) {
+
+      console.error(
+        "Get workspace events error:",
+        error
+      );
+
+
+      res.status(500).json({
+
+        success:
+          false,
+
+        message:
+          "Unable to get workspace events"
+
       });
 
     }
 
-
-    const room = rooms.get(roomId);
-
-
-    room.users.set(socket.id, {
-      id: socket.id,
-      name: socket.data.userName
-    });
+  }
+);
 
 
-    /*
-      Send current editor state
-      to newly joined user
-    */
+/*
+  ALTERNATIVE ROUTE
 
-    socket.emit("editor-state", {
+  This is added so your old ReplayPanel
+  URL can also work if needed.
 
-      code: room.code,
+  Example:
+  /api/workspace-events/102
+*/
 
-      language: room.language
+app.get(
+  "/api/workspace-events/:roomId",
 
-    });
+  async (req, res) => {
 
+    try {
 
-    /*
-      Send all users to new user
-    */
-
-    socket.emit(
-      "room-users",
-      Array.from(room.users.values())
-    );
+      const {
+        roomId
+      } = req.params;
 
 
-    /*
-      Send updated count
-      to everyone
-    */
+      const events =
+        await WorkspaceEvent
+          .find({
+            roomId
+          })
+          .sort({
+            createdAt: -1
+          });
 
-    io.to(roomId).emit(
-      "user-count",
-      room.users.size
-    );
+
+      res.status(200).json({
+
+        success:
+          true,
+
+        count:
+          events.length,
+
+        events
+
+      });
+
+    } catch (error) {
+
+      console.error(
+        "Get workspace events error:",
+        error
+      );
 
 
-    /*
-      Notify others
-    */
+      res.status(500).json({
 
-    socket.to(roomId).emit(
-      "user-joined",
-      {
-        id: socket.id,
-        name: socket.data.userName
-      }
-    );
+        success:
+          false,
 
+        message:
+          "Unable to get workspace events"
+
+      });
+
+    }
+
+  }
+);
+
+
+/*
+  SOCKET CONNECTION
+*/
+
+io.on(
+  "connection",
+
+  (socket) => {
 
     console.log(
-      `${socket.data.userName} joined ${roomId}`
-    );
-
-  });
-
-
-  /*
-    WHITEBOARD DRAWING
-  */
-
-  socket.on(
-    "whiteboard-draw",
-    ({ roomId, shape }) => {
-
-      if (!roomId || !shape) {
-        return;
-      }
-
-
-      socket.to(roomId).emit(
-        "whiteboard-draw",
-        {
-          shape
-        }
-      );
-
-    }
-  );
-
-
-  /*
-    CLEAR WHITEBOARD
-  */
-
-  socket.on(
-    "whiteboard-clear",
-    ({ roomId }) => {
-
-      if (!roomId) {
-        return;
-      }
-
-
-      socket.to(roomId).emit(
-        "whiteboard-clear"
-      );
-
-    }
-  );
-
-
-  /*
-    CURSOR MOVEMENT
-  */
-
-  socket.on(
-    "cursor-move",
-    ({ roomId, x, y }) => {
-
-      if (!roomId) {
-        return;
-      }
-
-
-      socket.to(roomId).emit(
-        "cursor-move",
-        {
-          id: socket.id,
-          name: socket.data.userName,
-          x,
-          y
-        }
-      );
-
-    }
-  );
-
-
-  /*
-    CODE CHANGE
-
-    Save the latest room state
-    and send it to everyone else.
-  */
-
-  socket.on(
-    "code-change",
-    ({
-      roomId,
-      code,
-      language
-    }) => {
-
-      if (!roomId) {
-        return;
-      }
-
-
-      const room =
-        rooms.get(roomId);
-
-
-      if (!room) {
-        return;
-      }
-
-
-      room.code = code;
-      room.language = language;
-
-
-      socket.to(roomId).emit(
-        "code-change",
-        {
-          code,
-          language
-        }
-      );
-
-    }
-  );
-
-
-  /*
-    DISCONNECT
-  */
-
-  socket.on("disconnect", () => {
-
-    const roomId =
-      socket.data.roomId;
-
-
-    if (!roomId) {
-
-      console.log(
-        "User disconnected:",
-        socket.id
-      );
-
-      return;
-
-    }
-
-
-    const room =
-      rooms.get(roomId);
-
-
-    if (room) {
-
-      room.users.delete(
-        socket.id
-      );
-
-
-      socket.to(roomId).emit(
-        "user-left",
-        {
-          id: socket.id
-        }
-      );
-
-
-      io.to(roomId).emit(
-        "user-count",
-        room.users.size
-      );
-
-
-      if (room.users.size === 0) {
-
-        /*
-          We keep the room state for now.
-          This allows future users
-          to reconnect without server crash.
-        */
-
-        console.log(
-          `Room ${roomId} is now empty`
-        );
-
-      }
-
-    }
-
-
-    console.log(
-      "User disconnected:",
+      "User connected:",
       socket.id
     );
 
-  });
 
-});
+    /*
+      JOIN ROOM
+    */
+
+    socket.on(
+      "join-room",
+
+      async ({
+        roomId,
+        userName
+      }) => {
+
+        try {
+
+          if (!roomId) {
+
+            return;
+
+          }
 
 
-server.listen(PORT, () => {
+          /*
+            NORMALIZE ROOM ID
+          */
 
-  console.log(
-    `SyncSpace backend running on http://localhost:${PORT}`
-  );
+          roomId =
+            String(roomId)
+              .trim();
 
-});
+
+          /*
+            LEAVE PREVIOUS ROOM
+          */
+
+          const previousRoomId =
+            socket.data.roomId;
+
+
+          if (
+            previousRoomId &&
+            previousRoomId !== roomId
+          ) {
+
+            socket.leave(
+              previousRoomId
+            );
+
+          }
+
+
+          /*
+            SAVE USER DATA
+          */
+
+          socket.data.roomId =
+            roomId;
+
+
+          socket.data.userName =
+            userName || "Guest";
+
+
+          /*
+            JOIN SOCKET ROOM
+          */
+
+          socket.join(
+            roomId
+          );
+
+
+          /*
+            GET OR CREATE WORKSPACE
+
+            upsert prevents duplicate room
+            creation errors.
+          */
+
+          const workspace =
+            await Workspace.findOneAndUpdate(
+
+              {
+                roomId
+              },
+
+              {
+                $setOnInsert: {
+
+                  roomId,
+
+                  whiteboardData:
+                    [],
+
+                  code:
+                    defaultCode,
+
+                  language:
+                    "javascript"
+
+                }
+
+              },
+
+              {
+
+                new:
+                  true,
+
+                upsert:
+                  true,
+
+                setDefaultsOnInsert:
+                  true
+
+              }
+
+            );
+
+
+          /*
+            SEND SAVED WORKSPACE STATE
+
+            This restores the whiteboard,
+            code and selected language.
+          */
+
+          socket.emit(
+            "workspace-state",
+
+            {
+
+              whiteboardData:
+                workspace.whiteboardData || [],
+
+              code:
+                workspace.code || defaultCode,
+
+              language:
+                workspace.language || "javascript"
+
+            }
+
+          );
+
+
+          /*
+            SEND EDITOR STATE
+          */
+
+          socket.emit(
+            "editor-state",
+
+            {
+
+              code:
+                workspace.code || defaultCode,
+
+              language:
+                workspace.language || "javascript"
+
+            }
+
+          );
+
+
+          /*
+            GET USER COUNT
+          */
+
+          const roomSockets =
+            io.sockets.adapter.rooms.get(
+              roomId
+            );
+
+
+          const userCount =
+            roomSockets
+              ? roomSockets.size
+              : 1;
+
+
+          /*
+            UPDATE USER COUNT
+          */
+
+          io.to(roomId).emit(
+            "user-count",
+            userCount
+          );
+
+
+          /*
+            NOTIFY OTHER USERS
+          */
+
+          socket.to(roomId).emit(
+            "user-joined",
+
+            {
+
+              id:
+                socket.id,
+
+              name:
+                socket.data.userName
+
+            }
+
+          );
+
+
+          /*
+            SAVE JOIN EVENT
+          */
+
+          try {
+
+            await WorkspaceEvent.create({
+
+              roomId,
+
+              userName:
+                socket.data.userName,
+
+              eventType:
+                "join",
+
+              data: {
+
+                socketId:
+                  socket.id
+
+              }
+
+            });
+
+          } catch (eventError) {
+
+            console.error(
+              "Join event save error:",
+              eventError
+            );
+
+          }
+
+
+          console.log(
+            `${socket.data.userName} joined room ${roomId}`
+          );
+
+        } catch (error) {
+
+          console.error(
+            "Join room error:",
+            error
+          );
+
+
+          socket.emit(
+            "room-error",
+
+            {
+
+              message:
+                "Unable to join workspace"
+
+            }
+
+          );
+
+        }
+
+      }
+    );
+
+
+    /*
+      WHITEBOARD DRAWING
+    */
+
+    socket.on(
+      "whiteboard-draw",
+
+      async ({
+        roomId,
+        shape
+      }) => {
+
+        try {
+
+          if (
+            !roomId ||
+            !shape
+          ) {
+
+            return;
+
+          }
+
+
+          roomId =
+            String(roomId)
+              .trim();
+
+
+          /*
+            SEND DRAWING TO OTHER USERS
+          */
+
+          socket.to(roomId).emit(
+            "whiteboard-draw",
+
+            {
+              shape
+            }
+          );
+
+
+          /*
+            SAVE DRAWING IN DATABASE
+          */
+
+          await Workspace.findOneAndUpdate(
+
+            {
+              roomId
+            },
+
+            {
+
+              $push: {
+
+                whiteboardData:
+                  shape
+
+              }
+
+            },
+
+            {
+
+              new:
+                true,
+
+              upsert:
+                true
+
+            }
+
+          );
+
+
+          /*
+            SAVE EVENT
+          */
+
+          try {
+
+            await WorkspaceEvent.create({
+
+              roomId,
+
+              userName:
+                socket.data.userName || "Guest",
+
+              eventType:
+                "whiteboard-draw",
+
+              data: {
+
+                shapeId:
+                  shape.id || null,
+
+                type:
+                  shape.type || "drawing"
+
+              }
+
+            });
+
+          } catch (eventError) {
+
+            console.error(
+              "Whiteboard event save error:",
+              eventError
+            );
+
+          }
+
+        } catch (error) {
+
+          console.error(
+            "Whiteboard draw error:",
+            error
+          );
+
+        }
+
+      }
+    );
+
+
+    /*
+      WHITEBOARD CLEAR
+    */
+
+    socket.on(
+      "whiteboard-clear",
+
+      async ({
+        roomId
+      }) => {
+
+        try {
+
+          if (!roomId) {
+
+            return;
+
+          }
+
+
+          roomId =
+            String(roomId)
+              .trim();
+
+
+          /*
+            CLEAR DATABASE
+          */
+
+          await Workspace.findOneAndUpdate(
+
+            {
+              roomId
+            },
+
+            {
+
+              $set: {
+
+                whiteboardData:
+                  []
+
+              }
+
+            },
+
+            {
+
+              new:
+                true,
+
+              upsert:
+                true
+
+            }
+
+          );
+
+
+          /*
+            NOTIFY OTHER USERS
+          */
+
+          socket.to(roomId).emit(
+            "whiteboard-clear"
+          );
+
+
+          /*
+            SAVE EVENT
+          */
+
+          try {
+
+            await WorkspaceEvent.create({
+
+              roomId,
+
+              userName:
+                socket.data.userName || "Guest",
+
+              eventType:
+                "whiteboard-clear",
+
+              data:
+                {}
+
+            });
+
+          } catch (eventError) {
+
+            console.error(
+              "Clear event save error:",
+              eventError
+            );
+
+          }
+
+        } catch (error) {
+
+          console.error(
+            "Whiteboard clear error:",
+            error
+          );
+
+        }
+
+      }
+    );
+
+
+    /*
+      CURSOR MOVEMENT
+    */
+
+    socket.on(
+      "cursor-move",
+
+      ({
+        roomId,
+        x,
+        y
+      }) => {
+
+        if (!roomId) {
+
+          return;
+
+        }
+
+
+        socket.to(roomId).emit(
+          "cursor-move",
+
+          {
+
+            id:
+              socket.id,
+
+            name:
+              socket.data.userName || "Guest",
+
+            x,
+
+            y
+
+          }
+        );
+
+      }
+    );
+
+
+    /*
+      CODE CHANGE
+    */
+
+    socket.on(
+      "code-change",
+
+      async ({
+        roomId,
+        code,
+        language
+      }) => {
+
+        try {
+
+          if (!roomId) {
+
+            return;
+
+          }
+
+
+          roomId =
+            String(roomId)
+              .trim();
+
+
+          /*
+            SAVE CODE
+          */
+
+          await Workspace.findOneAndUpdate(
+
+            {
+              roomId
+            },
+
+            {
+
+              $set: {
+
+                code:
+                  code || "",
+
+                language:
+                  language || "javascript"
+
+              }
+
+            },
+
+            {
+
+              new:
+                true,
+
+              upsert:
+                true
+
+            }
+
+          );
+
+
+          /*
+            SEND TO OTHER USERS
+          */
+
+          socket.to(roomId).emit(
+            "code-change",
+
+            {
+
+              code,
+
+              language
+
+            }
+
+          );
+
+
+          /*
+            SAVE EVENT
+          */
+
+          try {
+
+            await WorkspaceEvent.create({
+
+              roomId,
+
+              userName:
+                socket.data.userName || "Guest",
+
+              eventType:
+                "code-change",
+
+              data: {
+
+                language:
+                  language || "javascript"
+
+              }
+
+            });
+
+          } catch (eventError) {
+
+            console.error(
+              "Code event save error:",
+              eventError
+            );
+
+          }
+
+        } catch (error) {
+
+          console.error(
+            "Code change error:",
+            error
+          );
+
+        }
+
+      }
+    );
+
+
+    /*
+      LEAVE ROOM
+    */
+
+    socket.on(
+      "leave-room",
+
+      async ({
+        roomId
+      }) => {
+
+        try {
+
+          if (!roomId) {
+
+            return;
+
+          }
+
+
+          roomId =
+            String(roomId)
+              .trim();
+
+
+          /*
+            NOTIFY OTHER USERS
+          */
+
+          socket.to(roomId).emit(
+            "user-left",
+
+            {
+
+              id:
+                socket.id
+
+            }
+          );
+
+
+          /*
+            LEAVE SOCKET ROOM
+          */
+
+          socket.leave(
+            roomId
+          );
+
+
+          socket.data.roomId =
+            null;
+
+
+          /*
+            GET UPDATED USER COUNT
+          */
+
+          const roomSockets =
+            io.sockets.adapter.rooms.get(
+              roomId
+            );
+
+
+          const userCount =
+            roomSockets
+              ? roomSockets.size
+              : 0;
+
+
+          io.to(roomId).emit(
+            "user-count",
+            userCount
+          );
+
+
+          /*
+            SAVE LEAVE EVENT
+          */
+
+          try {
+
+            await WorkspaceEvent.create({
+
+              roomId,
+
+              userName:
+                socket.data.userName || "Guest",
+
+              eventType:
+                "leave",
+
+              data: {
+
+                socketId:
+                  socket.id
+
+              }
+
+            });
+
+          } catch (eventError) {
+
+            console.error(
+              "Leave event save error:",
+              eventError
+            );
+
+          }
+
+
+          console.log(
+            `${socket.data.userName} left room ${roomId}`
+          );
+
+        } catch (error) {
+
+          console.error(
+            "Leave room error:",
+            error
+          );
+
+        }
+
+      }
+    );
+
+
+    /*
+      DISCONNECT
+    */
+
+    socket.on(
+      "disconnect",
+
+      async () => {
+
+        try {
+
+          const roomId =
+            socket.data.roomId;
+
+
+          if (!roomId) {
+
+            console.log(
+              "User disconnected:",
+              socket.id
+            );
+
+            return;
+
+          }
+
+
+          /*
+            NOTIFY OTHER USERS
+          */
+
+          socket.to(roomId).emit(
+            "user-left",
+
+            {
+
+              id:
+                socket.id
+
+            }
+          );
+
+
+          /*
+            UPDATE USER COUNT
+
+            Socket.IO automatically removes
+            the socket from the room.
+          */
+
+          setTimeout(() => {
+
+            const roomSockets =
+              io.sockets.adapter.rooms.get(
+                roomId
+              );
+
+
+            const userCount =
+              roomSockets
+                ? roomSockets.size
+                : 0;
+
+
+            io.to(roomId).emit(
+              "user-count",
+              userCount
+            );
+
+          }, 0);
+
+
+          /*
+            SAVE LEAVE EVENT
+          */
+
+          try {
+
+            await WorkspaceEvent.create({
+
+              roomId,
+
+              userName:
+                socket.data.userName || "Guest",
+
+              eventType:
+                "leave",
+
+              data: {
+
+                socketId:
+                  socket.id
+
+              }
+
+            });
+
+          } catch (eventError) {
+
+            console.error(
+              "Disconnect event save error:",
+              eventError
+            );
+
+          }
+
+
+          console.log(
+            "User disconnected:",
+            socket.id
+          );
+
+        } catch (error) {
+
+          console.error(
+            "Disconnect error:",
+            error
+          );
+
+        }
+
+      }
+    );
+
+  }
+);
+
+
+/*
+  START SERVER
+*/
+
+server.listen(
+
+  PORT,
+
+  () => {
+
+    console.log(
+      `SyncSpace backend running on http://localhost:${PORT}`
+    );
+
+  }
+
+);

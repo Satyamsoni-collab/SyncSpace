@@ -18,7 +18,6 @@ function CodeEditor({
   userName = "Guest"
 }) {
 
-
   const [code, setCode] = useState(
 `// Welcome to SyncSpace
 
@@ -34,8 +33,8 @@ console.log("Start collaborating!");`
     useState(false);
 
 
-  useEffect(() => {
 
+  useEffect(() => {
 
     const handleConnect = () => {
 
@@ -47,7 +46,6 @@ console.log("Start collaborating!");`
         userName
       );
 
-
     };
 
 
@@ -58,11 +56,49 @@ console.log("Start collaborating!");`
     };
 
 
+    /*
+      Receive current room editor state
+      when joining the room
+    */
+
+    const handleEditorState = ({
+      code: savedCode,
+      language: savedLanguage
+    }) => {
+
+      if (
+        savedCode !== undefined
+      ) {
+
+        setCode(
+          savedCode
+        );
+
+      }
+
+
+      if (
+        savedLanguage
+      ) {
+
+        setLanguage(
+          savedLanguage
+        );
+
+      }
+
+    };
+
+
+    /*
+      Receive real-time code updates
+      from other users
+    */
+
     const handleCodeChange = ({
       code: updatedCode,
       language: updatedLanguage
     }) => {
-
 
       if (
         updatedCode !== undefined
@@ -85,7 +121,6 @@ console.log("Start collaborating!");`
 
       }
 
-
     };
 
 
@@ -106,14 +141,20 @@ console.log("Start collaborating!");`
 
 
     socket.on(
+      "editor-state",
+      handleEditorState
+    );
+
+
+    socket.on(
       "code-change",
       handleCodeChange
     );
 
 
     /*
-      If socket is already connected,
-      directly join the room.
+      If already connected,
+      directly join the room
     */
 
     if (socket.connected) {
@@ -135,7 +176,6 @@ console.log("Start collaborating!");`
 
     return () => {
 
-
       socket.off(
         "connect",
         handleConnect
@@ -149,10 +189,15 @@ console.log("Start collaborating!");`
 
 
       socket.off(
+        "editor-state",
+        handleEditorState
+      );
+
+
+      socket.off(
         "code-change",
         handleCodeChange
       );
-
 
     };
 
@@ -166,7 +211,6 @@ console.log("Start collaborating!");`
 
   const handleCodeChange =
     (value) => {
-
 
       const newCode =
         value || "";
@@ -195,14 +239,12 @@ console.log("Start collaborating!");`
 
       }
 
-
     };
 
 
 
   const handleLanguageChange =
     (event) => {
-
 
       const newLanguage =
         event.target.value;
@@ -231,13 +273,11 @@ console.log("Start collaborating!");`
 
       }
 
-
     };
 
 
 
   const exportCode = () => {
-
 
     const fileExtension =
       {
@@ -261,8 +301,7 @@ console.log("Start collaborating!");`
       new Blob(
         [code],
         {
-          type:
-            "text/plain"
+          type: "text/plain"
         }
       );
 
@@ -304,7 +343,6 @@ console.log("Start collaborating!");`
       url
     );
 
-
   };
 
 
@@ -328,8 +366,7 @@ console.log("Start collaborating!");`
                 ? "connection-dot connected"
                 : "connection-dot"
             }
-          >
-          </span>
+          ></span>
 
 
           <div className="connection-info">
@@ -337,9 +374,11 @@ console.log("Start collaborating!");`
 
             <span className="connection-text">
 
-              {connected
-                ? "Connected"
-                : "Connecting..."}
+              {
+                connected
+                  ? "Connected"
+                  : "Connecting..."
+              }
 
             </span>
 
@@ -439,49 +478,37 @@ console.log("Start collaborating!");`
               enabled: false
             },
 
-
             fontSize: 14,
-
 
             fontFamily:
               "Consolas, monospace",
-
 
             padding: {
               top: 18,
               bottom: 18
             },
 
-
             smoothScrolling: true,
-
 
             cursorSmoothCaretAnimation:
               "on",
 
-
             scrollBeyondLastLine:
               false,
 
-
             automaticLayout: true,
-
 
             lineNumbers:
               "on",
 
-
             roundedSelection:
               true,
-
 
             cursorBlinking:
               "smooth",
 
-
             wordWrap:
               "on"
-
 
           }}
 
@@ -489,6 +516,7 @@ console.log("Start collaborating!");`
 
 
       </div>
+
 
 
       {/* Bottom Status */}
@@ -516,7 +544,6 @@ console.log("Start collaborating!");`
     </div>
 
   );
-
 
 }
 
