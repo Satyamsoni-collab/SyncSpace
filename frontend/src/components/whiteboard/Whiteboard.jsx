@@ -34,6 +34,7 @@ function Whiteboard({
   const stageRef = useRef(null);
   const drawingRef = useRef(false);
   const currentShapeRef = useRef(null);
+
   const animationFrameRef = useRef(null);
 
   const [shapes, setShapes] =
@@ -60,44 +61,6 @@ function Whiteboard({
 
   /*
     YJS STATE SYNCHRONIZATION
-  */
-
-  useEffect(() => {
-
-    const loadShapesFromYjs = () => {
-
-      const savedShapes =
-        sharedState.get("shapes");
-
-      if (Array.isArray(savedShapes)) {
-        setShapes(savedShapes);
-      }
-
-    };
-
-    loadShapesFromYjs();
-
-    const handleYjsChange = () => {
-      loadShapesFromYjs();
-    };
-
-    sharedState.observe(
-      handleYjsChange
-    );
-
-    return () => {
-
-      sharedState.unobserve(
-        handleYjsChange
-      );
-
-    };
-
-  }, []);
-
-
-  /*
-    RESPONSIVE CANVAS SIZE
   */
 
   useEffect(() => {
@@ -140,23 +103,64 @@ function Whiteboard({
 
 
   /*
-    CONNECT TO SOCKET SERVER
+    Connect to Socket Server
+    and restore workspace data
   */
 
   useEffect(() => {
 
-    connectToServer(
-      roomId,
-      userName
-    );
 
+    /*
+      RESTORE SAVED WORKSPACE
+    */
+
+    const handleWorkspaceState =
+      (workspace) => {
+
+        if (!workspace) {
+          return;
+        }
+
+
+        const savedShapes =
+          workspace.whiteboardData;
+
+
+        if (
+          Array.isArray(savedShapes)
+        ) {
+
+          setShapes(
+            savedShapes
+          );
+
+        }
+
+      };
+
+
+
+    /*
+      CONNECT
+    */
 
     const handleConnect = () => {
 
       setConnected(true);
 
+
+      connectToServer(
+        roomId,
+        userName
+      );
+
     };
 
+
+
+    /*
+      DISCONNECT
+    */
 
     const handleDisconnect = () => {
 
@@ -164,6 +168,11 @@ function Whiteboard({
 
     };
 
+
+
+    /*
+      CURRENT ROOM USERS
+    */
 
     const handleRoomUsers =
       (users) => {
@@ -183,6 +192,11 @@ function Whiteboard({
 
       };
 
+
+
+    /*
+      NEW USER JOINED
+    */
 
     const handleUserJoined =
       (user) => {
@@ -228,6 +242,11 @@ function Whiteboard({
       };
 
 
+
+    /*
+      USER LEFT
+    */
+
     const handleUserLeft =
       ({ id }) => {
 
@@ -256,22 +275,15 @@ function Whiteboard({
       };
 
 
-    /*
-      Receive completed shape from
-      another Socket.IO client.
 
-      Duplicate check is important
-      because Yjs can also deliver
-      the same shared state.
+    /*
+      RECEIVE NEW WHITEBOARD SHAPE
     */
 
     const handleWhiteboardDraw =
       ({ shape }) => {
 
-        if (
-          !shape ||
-          !shape.id
-        ) {
+        if (!shape) {
           return;
         }
 
@@ -311,26 +323,26 @@ function Whiteboard({
               updatedShapes
             );
 
-            return updatedShapes;
-
-          }
-        );
-
       };
 
+
+
+    /*
+      CLEAR WHITEBOARD
+    */
 
     const handleWhiteboardClear =
       () => {
 
         setShapes([]);
 
-        sharedState.set(
-          "shapes",
-          []
-        );
-
       };
 
+
+
+    /*
+      REGISTER SOCKET EVENTS
+    */
 
     socket.on(
       "connect",
@@ -341,6 +353,12 @@ function Whiteboard({
       "disconnect",
       handleDisconnect
     );
+
+    socket.on(
+      "workspace-state",
+      handleWorkspaceState
+    );
+
 
     socket.on(
       "room-users",
@@ -368,10 +386,32 @@ function Whiteboard({
     );
 
 
+
+    /*
+      IF ALREADY CONNECTED
+      JOIN THE ROOM
+    */
+
     if (socket.connected) {
       setConnected(true);
+
+
+      connectToServer(
+        roomId,
+        userName
+      );
+
+    } else {
+
+      socket.connect();
+
     }
 
+
+
+    /*
+      CLEANUP
+    */
 
     return () => {
 
@@ -384,6 +424,12 @@ function Whiteboard({
         "disconnect",
         handleDisconnect
       );
+
+      socket.off(
+        "workspace-state",
+        handleWorkspaceState
+      );
+
 
       socket.off(
         "room-users",
@@ -444,6 +490,10 @@ function Whiteboard({
       let newShape;
 
 
+      /*
+        PEN
+      */
+
       if (tool === "pen") {
 
         newShape = {
@@ -466,6 +516,10 @@ function Whiteboard({
 
       }
 
+
+      /*
+        RECTANGLE
+      */
 
       else if (
         tool === "rectangle"
@@ -495,33 +549,9 @@ function Whiteboard({
       }
 
 
-      else if (
-        tool === "circle"
-      ) {
-
-        newShape = {
-
-          id:
-            `${socket.id}-${Date.now()}-${Math.random()}`,
-
-          type: "circle",
-
-          x:
-            pointer.x,
-
-          y:
-            pointer.y,
-
-          radius: 0,
-
-          color,
-
-          strokeWidth: 3
-
-        };
-
-      }
-
+      /*
+        TEXT
+      */
 
       else if (
         tool === "text"
@@ -645,13 +675,7 @@ function Whiteboard({
 
 
   /*
-    DRAWING MOVEMENT
-
-    Local state is updated while
-    the user is drawing.
-
-    The completed shape is synced
-    in handleMouseUp.
+    Drawing Movement
   */
 
   const handleMouseMove =
@@ -782,28 +806,6 @@ function Whiteboard({
                 }
 
 
-                else if (
-                  shape.type ===
-                  "circle"
-                ) {
-
-                  const deltaX =
-                    pointer.x -
-                    shape.x;
-
-                  const deltaY =
-                    pointer.y -
-                    shape.y;
-
-                  shape.radius =
-                    Math.sqrt(
-                      deltaX * deltaX +
-                      deltaY * deltaY
-                    );
-
-                }
-
-
                 updatedShapes[index] =
                   shape;
 
@@ -854,38 +856,9 @@ function Whiteboard({
         null;
 
 
-      /*
-        Store the completed local
-        canvas state in Yjs.
-
-        Using the functional setter
-        ensures we use the latest
-        local shape array.
-      */
-
-      setShapes(
-        (previousShapes) => {
-
-          const safeShapes =
-            Array.isArray(previousShapes)
-              ? previousShapes
-              : [];
-
-          const updatedShapes =
-            safeShapes.map(
-              (shape) =>
-                shape &&
-                shape.id ===
-                completedShape.id
-                  ? completedShape
-                  : shape
-            );
-
-
-          sharedState.set(
-            "shapes",
-            updatedShapes
-          );
+      socket.emit(
+        "whiteboard-draw",
+        {
 
 
           return updatedShapes;
@@ -960,6 +933,10 @@ function Whiteboard({
       }
 
 
+      /*
+        PEN
+      */
+
       if (
         shape.type === "pen"
       ) {
@@ -988,6 +965,10 @@ function Whiteboard({
       }
 
 
+      /*
+        RECTANGLE
+      */
+
       if (
         shape.type ===
         "rectangle"
@@ -1014,30 +995,9 @@ function Whiteboard({
       }
 
 
-      if (
-        shape.type === "circle"
-      ) {
-
-        return (
-
-          <Circle
-            key={shape.id}
-            x={shape.x}
-            y={shape.y}
-            radius={shape.radius || 0}
-            stroke={
-              shape.color ||
-              "#2563eb"
-            }
-            strokeWidth={
-              shape.strokeWidth || 3
-            }
-          />
-
-        );
-
-      }
-
+      /*
+        TEXT
+      */
 
       if (
         shape.type === "text"
@@ -1068,7 +1028,7 @@ function Whiteboard({
 
 
   /*
-    COUNT USERS SAFELY
+    COUNT CONNECTED USERS
   */
 
   const totalUsers =

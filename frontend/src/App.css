@@ -11,12 +11,118 @@
   padding: 0;
 }
 
-body {
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-  background-color: #0d1117; /* Modern dark theme base */
-  color: #c9d1d9; /* Modern dark text */
+
+html,
+body,
+#root {
+  width: 100%;
+  height: 100%;
 }
 
+
+body {
+  font-family: "Inter", sans-serif;
+  background: #09111f;
+  color: #eef4ff;
+  overflow: hidden;
+}
+
+
+/* =========================
+   JOIN PAGE
+}
+
+
+/* =========================
+   REPLAY PANEL
+========================= */
+
+.replay-workspace-panel {
+
+  position: absolute;
+
+  top: 18px;
+
+  right: 18px;
+
+  bottom: 18px;
+
+  width:
+    min(430px, calc(100vw - 36px));
+
+  z-index: 20;
+
+  overflow-y: auto;
+
+  border-radius: 20px;
+
+  background:
+    linear-gradient(
+      145deg,
+      rgba(19, 29, 47, 0.99),
+      rgba(11, 19, 32, 0.99)
+    );
+
+  border:
+    1px solid
+    rgba(255, 255, 255, 0.1);
+
+  box-shadow:
+    -20px 20px 60px
+    rgba(0, 0, 0, 0.45);
+
+  animation:
+    slideReplayPanel
+    0.3s
+    ease;
+
+}
+
+
+@keyframes slideReplayPanel {
+
+  from {
+
+    opacity: 0;
+
+    transform:
+      translateX(30px);
+
+  }
+
+
+  to {
+
+    opacity: 1;
+
+    transform:
+      translateX(0);
+
+  }
+
+}
+
+
+.replay-workspace-panel::-webkit-scrollbar {
+
+  width: 6px;
+
+}
+
+
+.replay-workspace-panel::-webkit-scrollbar-thumb {
+
+  background:
+    rgba(255, 255, 255, 0.15);
+
+  border-radius: 10px;
+
+}
+
+
+/* =========================
+   WORKSPACE PANELS
+========================= */
 
 .workspace-panel {
 
@@ -114,6 +220,7 @@ body {
   border: 1px solid rgba(240, 246, 252, 0.1);
   display: flex;
   align-items: center;
+
   justify-content: center;
   min-height: 38px; /* prevents height jumping when spinner shows */
 }
@@ -197,7 +304,9 @@ body {
 
   animation:
     livePulse
-    1.5s infinite;
+    1.5s
+    infinite;
+
 }
 
 
@@ -212,6 +321,7 @@ body {
   min-height: 0;
 
   overflow: hidden;
+
 }
 
 
@@ -235,8 +345,8 @@ body {
   z-index: 10;
 }
 
-.divider:hover {
-  background-color: #58a6ff;
+  gap: 8px;
+
 }
 
 
@@ -252,6 +362,7 @@ body {
       rgba(255, 255, 255, 0.12),
       transparent
     );
+
 }
 
 
@@ -263,44 +374,44 @@ body {
   display: flex;
 
   align-items: center;
+
   justify-content: center;
-  margin: 16px;
-  border: 2px dashed #30363d;
-  border-radius: 8px;
-  color: #8b949e;
+
+  border-radius: 50%;
+
+  background:
+    rgba(255, 255, 255, 0.05);
+
+  border:
+    1px solid
+    rgba(255, 255, 255, 0.1);
+
+  color: #71839c;
+
+  font-size: 12px;
+
 }
 
-.editor-container {
-  background-color: #0d1117;
-}
 
-.placeholder-container h3 {
-  margin-bottom: 8px;
-  color: #c9d1d9;
+/* =========================
+   STATUS BAR
 }
 
 /* ==============================
    UX: Loading & Error States
    ============================== */
 
-/* Error Banner styling matching GitHub's dark theme alerts */
-.error-banner {
-  background-color: rgba(248, 81, 73, 0.1);
-  color: #ff7b72;
-  border: 1px solid rgba(248, 81, 73, 0.4);
-  padding: 12px 16px;
-  border-radius: 6px;
-  width: 100%;
-  max-width: 320px;
+.status-center {
+
   text-align: center;
-  font-size: 0.9rem;
-  margin-bottom: 8px;
-  animation: fadeIn 0.3s ease-in-out;
+
 }
 
-@keyframes fadeIn {
-  from { opacity: 0; transform: translateY(-5px); }
-  to { opacity: 1; transform: translateY(0); }
+
+.status-right {
+
+  text-align: right;
+
 }
 
 /* Loading Spinner CSS Animation */
@@ -316,55 +427,98 @@ body {
 
 /* =========================
    RESPONSIVE
-
-/* --- Responsive Design (Tablets & Mobile) --- */
-@media (max-width: 768px) {
-  .workspace {
-    flex-direction: column; /* Stack vertically on small screens */
   }
 
 
   .feature-list {
+
     max-width: 600px;
+
     margin: auto;
+
   }
 
 
   .join-card-container {
+
     max-width: 560px;
+
     width: 100%;
+
     margin: auto;
+
   }
 
 
   .workspace {
 
-    grid-template-columns: 1fr;
+    grid-template-columns:
+      1fr;
 
     overflow-y: auto;
+
   }
 
 
   .workspace-divider {
+
     display: none;
+
   }
 
 
   .workspace-panel {
-    min-height: 50vh; /* Ensure both halves get space when stacked */
+
+    min-height: 600px;
+
+    margin-bottom: 18px;
+
   }
 
-  .nav-info {
-    display: none; /* Hide room details on mobile to save space for logo and buttons */
+
+  .top-nav {
+
+    grid-template-columns:
+      1fr
+      auto;
+
+    gap: 15px;
+
+  }
+
+
+  .room-status {
+
+    display: none;
+
+  }
+
+
+  .replay-workspace-panel {
+
+    top: 18px;
+
+    right: 18px;
+
+    width: 400px;
+
+    z-index: 40;
+
   }
 
 }
 
 
+/* =========================
+   MOBILE
+========================= */
+
 @media (max-width: 700px) {
 
   body {
+
     overflow: auto;
+
   }
 
 
@@ -375,11 +529,14 @@ body {
     padding:
       0
       20px;
+
   }
 
 
   .nav-live-status {
+
     display: none;
+
   }
 
 
@@ -388,6 +545,7 @@ body {
     padding:
       40px
       20px;
+
   }
 
 
@@ -396,11 +554,16 @@ body {
     font-size: 48px;
 
     letter-spacing: -2px;
+
   }
 
 
   .join-card {
-    padding: 30px 22px;
+
+    padding:
+      30px
+      22px;
+
   }
 
 
@@ -411,6 +574,7 @@ body {
       20px;
 
     font-size: 10px;
+
   }
 
 
@@ -421,48 +585,80 @@ body {
     padding:
       10px
       15px;
+
   }
 
 
   .brand-text p {
+
     display: none;
+
   }
 
 
   .header-button.secondary {
+
     display: none;
+
   }
 
 
   .workspace {
+
     padding: 10px;
+
   }
 
 
   .panel-header {
+
     padding: 14px;
+
   }
 
 
   .panel-live {
+
     display: none;
+
   }
 
 
   .status-bar {
-    grid-template-columns: 1fr;
+
+    grid-template-columns:
+      1fr;
 
     padding:
       10px
       15px;
 
     text-align: center;
+
   }
 
 
   .status-center,
   .status-right {
+
     display: none;
+
+  }
+
+
+  .replay-workspace-panel {
+
+    top: 10px;
+
+    right: 10px;
+
+    bottom: 10px;
+
+    width:
+      calc(100vw - 20px);
+
+    z-index: 50;
+
   }
 
 }

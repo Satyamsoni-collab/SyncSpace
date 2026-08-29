@@ -1,67 +1,67 @@
-import React, {
-  createContext,
-  useContext,
-  useEffect,
-  useState
-} from "react";
+// import React, {
+//   createContext,
+//   useContext,
+//   useEffect,
+//   useState
+// } from "react";
 
-import { io } from "socket.io-client";
+// import { io } from "socket.io-client";
 
-const SOCKET_URL =
-  "http://localhost:5000";
+// const SOCKET_URL =
+//   "http://localhost:5000";
 
-const SocketContext =
-  createContext(null);
-
-
-export function useSocket() {
-
-  return useContext(
-    SocketContext
-  );
-
-}
+// const SocketContext =
+//   createContext(null);
 
 
-export function SocketProvider({
-  children
-}) {
+// export function useSocket() {
 
-  const [socket, setSocket] =
-    useState(null);
+//   return useContext(
+//     SocketContext
+//   );
 
-
-  useEffect(() => {
-
-    const newSocket = io(
-      SOCKET_URL,
-      {
-        autoConnect: true
-      }
-    );
-
-    setSocket(newSocket);
+// }
 
 
-    return () => {
+// export function SocketProvider({
+//   children
+// }) {
 
-      newSocket.disconnect();
-
-    };
-
-  }, []);
+//   const [socket, setSocket] =
+//     useState(null);
 
 
-  return (
+//   useEffect(() => {
 
-    <SocketContext.Provider
-      value={socket}
-    >
+//     const newSocket = io(
+//       SOCKET_URL,
+//       {
+//         autoConnect: true
+//       }
+//     );
 
-      {children}
+//     setSocket(newSocket);
 
-    </SocketContext.Provider>
 
-  );
+//     return () => {
 
-}
+//       newSocket.disconnect();
+
+//     };
+
+//   }, []);
+
+
+//   return (
+
+//     <SocketContext.Provider
+//       value={socket}
+//     >
+
+//       {children}
+
+//     </SocketContext.Provider>
+
+//   );
+
+// }
