@@ -10,6 +10,7 @@ import {
   Layer,
   Line,
   Rect,
+  Circle,
   Text
 } from "react-konva";
 
@@ -20,6 +21,8 @@ import {
   connectToServer
 } from "../../services/socket";
 
+import { sharedState } from "../../yjs/yjsClient";
+
 import "./whiteboard.css";
 
 
@@ -29,25 +32,19 @@ function Whiteboard({
 }) {
 
   const stageRef = useRef(null);
-
   const drawingRef = useRef(false);
-
   const currentShapeRef = useRef(null);
 
   const animationFrameRef = useRef(null);
 
-
   const [shapes, setShapes] =
     useState([]);
-
 
   const [tool, setTool] =
     useState("pen");
 
-
   const [color, setColor] =
     useState("#2563eb");
-
 
   const [stageSize, setStageSize] =
     useState({
@@ -55,17 +52,15 @@ function Whiteboard({
       height: 600
     });
 
-
   const [connectedUsers, setConnectedUsers] =
     useState([]);
-
 
   const [connected, setConnected] =
     useState(false);
 
 
   /*
-    Get canvas size
+    YJS STATE SYNCHRONIZATION
   */
 
   useEffect(() => {
@@ -77,11 +72,9 @@ function Whiteboard({
           ".canvas-container"
         );
 
-
       if (!container) {
         return;
       }
-
 
       setStageSize({
         width: container.clientWidth,
@@ -90,15 +83,12 @@ function Whiteboard({
 
     };
 
-
     updateSize();
-
 
     window.addEventListener(
       "resize",
       updateSize
     );
-
 
     return () => {
 
@@ -110,7 +100,6 @@ function Whiteboard({
     };
 
   }, []);
-
 
 
   /*
@@ -197,7 +186,6 @@ function Whiteboard({
               )
             : [];
 
-
         setConnectedUsers(
           validUsers
         );
@@ -220,7 +208,6 @@ function Whiteboard({
           return;
         }
 
-
         setConnectedUsers(
           (previousUsers) => {
 
@@ -233,7 +220,6 @@ function Whiteboard({
                   )
                 : [];
 
-
             const alreadyExists =
               safeUsers.some(
                 (existingUser) =>
@@ -241,11 +227,9 @@ function Whiteboard({
                   user.id
               );
 
-
             if (alreadyExists) {
               return safeUsers;
             }
-
 
             return [
               ...safeUsers,
@@ -270,7 +254,6 @@ function Whiteboard({
           return;
         }
 
-
         setConnectedUsers(
           (previousUsers) => {
 
@@ -278,7 +261,6 @@ function Whiteboard({
               Array.isArray(previousUsers)
                 ? previousUsers
                 : [];
-
 
             return safeUsers.filter(
               (user) =>
@@ -305,15 +287,41 @@ function Whiteboard({
           return;
         }
 
-
         setShapes(
-          (previousShapes) => [
+          (previousShapes) => {
 
-            ...previousShapes,
-            shape
+            const safeShapes =
+              Array.isArray(previousShapes)
+                ? previousShapes
+                : [];
 
-          ]
-        );
+            const alreadyExists =
+              safeShapes.some(
+                (existingShape) =>
+                  existingShape &&
+                  existingShape.id ===
+                  shape.id
+              );
+
+            if (alreadyExists) {
+              return safeShapes;
+            }
+
+            const updatedShapes = [
+              ...safeShapes,
+              shape
+            ];
+
+            /*
+              Keep persisted Yjs state
+              synchronized with Socket.IO
+              updates.
+            */
+
+            sharedState.set(
+              "shapes",
+              updatedShapes
+            );
 
       };
 
@@ -341,12 +349,10 @@ function Whiteboard({
       handleConnect
     );
 
-
     socket.on(
       "disconnect",
       handleDisconnect
     );
-
 
     socket.on(
       "workspace-state",
@@ -359,24 +365,20 @@ function Whiteboard({
       handleRoomUsers
     );
 
-
     socket.on(
       "user-joined",
       handleUserJoined
     );
-
 
     socket.on(
       "user-left",
       handleUserLeft
     );
 
-
     socket.on(
       "whiteboard-draw",
       handleWhiteboardDraw
     );
-
 
     socket.on(
       "whiteboard-clear",
@@ -391,7 +393,6 @@ function Whiteboard({
     */
 
     if (socket.connected) {
-
       setConnected(true);
 
 
@@ -419,12 +420,10 @@ function Whiteboard({
         handleConnect
       );
 
-
       socket.off(
         "disconnect",
         handleDisconnect
       );
-
 
       socket.off(
         "workspace-state",
@@ -437,24 +436,20 @@ function Whiteboard({
         handleRoomUsers
       );
 
-
       socket.off(
         "user-joined",
         handleUserJoined
       );
-
 
       socket.off(
         "user-left",
         handleUserLeft
       );
 
-
       socket.off(
         "whiteboard-draw",
         handleWhiteboardDraw
       );
-
 
       socket.off(
         "whiteboard-clear",
@@ -463,16 +458,14 @@ function Whiteboard({
 
     };
 
-
   }, [
     roomId,
     userName
   ]);
 
 
-
   /*
-    Start Drawing
+    START DRAWING
   */
 
   const handleMouseDown =
@@ -481,18 +474,18 @@ function Whiteboard({
       const stage =
         event.target.getStage();
 
+      if (!stage) {
+        return;
+      }
 
       const pointer =
         stage.getPointerPosition();
-
 
       if (!pointer) {
         return;
       }
 
-
       drawingRef.current = true;
-
 
       let newShape;
 
@@ -506,7 +499,7 @@ function Whiteboard({
         newShape = {
 
           id:
-            `${socket.id}-${Date.now()}`,
+            `${socket.id}-${Date.now()}-${Math.random()}`,
 
           type: "pen",
 
@@ -535,7 +528,7 @@ function Whiteboard({
         newShape = {
 
           id:
-            `${socket.id}-${Date.now()}`,
+            `${socket.id}-${Date.now()}-${Math.random()}`,
 
           type: "rectangle",
 
@@ -569,7 +562,6 @@ function Whiteboard({
             "Enter your text"
           );
 
-
         if (!text) {
 
           drawingRef.current =
@@ -583,7 +575,7 @@ function Whiteboard({
         newShape = {
 
           id:
-            `${socket.id}-${Date.now()}`,
+            `${socket.id}-${Date.now()}-${Math.random()}`,
 
           type: "text",
 
@@ -605,28 +597,50 @@ function Whiteboard({
 
 
         setShapes(
-          (previousShapes) => [
+          (previousShapes) => {
 
-            ...previousShapes,
+            const safeShapes =
+              Array.isArray(previousShapes)
+                ? previousShapes
+                : [];
 
-            newShape
-
-          ]
-        );
-
-
-        socket.emit(
-          "whiteboard-draw",
-          {
-
-            roomId,
-
-            shape:
+            const updatedShapes = [
+              ...safeShapes,
               newShape
+            ];
+
+            sharedState.set(
+              "shapes",
+              updatedShapes
+            );
+
+            return updatedShapes;
 
           }
         );
 
+
+        if (socket?.connected) {
+
+          socket.emit(
+            "whiteboard-draw",
+            {
+              roomId,
+              shape: newShape
+            }
+          );
+
+        }
+
+        return;
+
+      }
+
+
+      if (!newShape) {
+
+        drawingRef.current =
+          false;
 
         return;
 
@@ -638,22 +652,26 @@ function Whiteboard({
 
 
       setShapes(
-        (previousShapes) => [
+        (previousShapes) => {
 
-          ...previousShapes,
+          const safeShapes =
+            Array.isArray(previousShapes)
+              ? previousShapes
+              : [];
 
-          newShape
+          return [
+            ...safeShapes,
+            newShape
+          ];
 
-        ]
+        }
       );
-
 
     }, [
       tool,
       color,
       roomId
     ]);
-
 
 
   /*
@@ -684,6 +702,15 @@ function Whiteboard({
 
             const stage =
               event.target.getStage();
+
+            if (!stage) {
+
+              animationFrameRef.current =
+                null;
+
+              return;
+
+            }
 
 
             const pointer =
@@ -720,9 +747,7 @@ function Whiteboard({
 
 
                 if (!currentShape) {
-
                   return updatedShapes;
-
                 }
 
 
@@ -736,16 +761,13 @@ function Whiteboard({
 
 
                 if (index === -1) {
-
                   return updatedShapes;
-
                 }
 
 
-                const shape =
-                  {
-                    ...updatedShapes[index]
-                  };
+                const shape = {
+                  ...updatedShapes[index]
+                };
 
 
                 if (
@@ -754,10 +776,13 @@ function Whiteboard({
 
                   shape.points = [
 
-                    ...shape.points,
+                    ...(Array.isArray(
+                      shape.points
+                    )
+                      ? shape.points
+                      : []),
 
                     pointer.x,
-
                     pointer.y
 
                   ];
@@ -773,7 +798,6 @@ function Whiteboard({
                   shape.width =
                     pointer.x -
                     shape.x;
-
 
                   shape.height =
                     pointer.y -
@@ -802,13 +826,11 @@ function Whiteboard({
           }
         );
 
-
     }, []);
 
 
-
   /*
-    Finish Drawing
+    FINISH DRAWING
   */
 
   const handleMouseUp =
@@ -838,23 +860,38 @@ function Whiteboard({
         "whiteboard-draw",
         {
 
-          roomId,
 
-          shape:
-            completedShape
+          return updatedShapes;
 
         }
       );
 
+
+      /*
+        Send only the completed
+        shape through Socket.IO.
+      */
+
+      if (socket?.connected) {
+
+        socket.emit(
+          "whiteboard-draw",
+          {
+            roomId,
+            shape:
+              completedShape
+          }
+        );
+
+      }
 
     }, [
       roomId
     ]);
 
 
-
   /*
-    Clear Canvas
+    CLEAR CANVAS
   */
 
   const clearCanvas =
@@ -862,25 +899,30 @@ function Whiteboard({
 
       setShapes([]);
 
-
-      socket.emit(
-        "whiteboard-clear",
-        {
-
-          roomId
-
-        }
+      sharedState.set(
+        "shapes",
+        []
       );
 
+
+      if (socket?.connected) {
+
+        socket.emit(
+          "whiteboard-clear",
+          {
+            roomId
+          }
+        );
+
+      }
 
     }, [
       roomId
     ]);
 
 
-
   /*
-    Render Shapes
+    RENDER SHAPES
   */
 
   const renderShape =
@@ -902,28 +944,20 @@ function Whiteboard({
         return (
 
           <Line
-
             key={shape.id}
-
             points={
               shape.points || []
             }
-
             stroke={
               shape.color ||
               "#2563eb"
             }
-
             strokeWidth={
               shape.strokeWidth || 3
             }
-
             lineCap="round"
-
             lineJoin="round"
-
             tension={0.3}
-
           />
 
         );
@@ -943,26 +977,17 @@ function Whiteboard({
         return (
 
           <Rect
-
             key={shape.id}
-
             x={shape.x}
-
             y={shape.y}
-
             width={shape.width}
-
             height={shape.height}
-
             stroke={
               shape.color ||
               "#2563eb"
             }
-
             strokeWidth={3}
-
             cornerRadius={4}
-
           />
 
         );
@@ -981,22 +1006,15 @@ function Whiteboard({
         return (
 
           <Text
-
             key={shape.id}
-
             x={shape.x}
-
             y={shape.y}
-
             text={shape.text}
-
             fontSize={20}
-
             fill={
               shape.color ||
               "#111827"
             }
-
           />
 
         );
@@ -1007,7 +1025,6 @@ function Whiteboard({
       return null;
 
     };
-
 
 
   /*
@@ -1024,81 +1041,58 @@ function Whiteboard({
     ).length;
 
 
-
   return (
 
     <div className="whiteboard-container">
 
-
       <Toolbar
-
         tool={tool}
-
         setTool={setTool}
-
         color={color}
-
         setColor={setColor}
-
         clearCanvas={
           clearCanvas
         }
-
         connectedUsers={
           totalUsers
         }
-
         connected={
           connected
         }
-
       />
-
 
 
       <div
         className="canvas-container"
       >
 
-
         <Stage
-
           ref={stageRef}
-
           width={
             stageSize.width
           }
-
           height={
             stageSize.height
           }
-
           onMouseDown={
             handleMouseDown
           }
-
           onMouseMove={
             handleMouseMove
           }
-
           onMouseUp={
             handleMouseUp
           }
-
           onTouchStart={
             handleMouseDown
           }
-
           onTouchMove={
             handleMouseMove
           }
-
           onTouchEnd={
             handleMouseUp
           }
-
         >
-
 
           <Layer>
 
@@ -1108,12 +1102,9 @@ function Whiteboard({
 
           </Layer>
 
-
         </Stage>
 
-
       </div>
-
 
     </div>
 
