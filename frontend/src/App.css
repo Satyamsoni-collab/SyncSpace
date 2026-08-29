@@ -36,6 +36,7 @@ body {
   min-height: 100vh;
   position: relative;
   overflow: hidden;
+
   background:
     radial-gradient(
       circle at 20% 20%,
@@ -58,8 +59,11 @@ body {
 
 .join-page::before {
   content: "";
+
   position: absolute;
+
   inset: 0;
+
   background-image:
     linear-gradient(
       rgba(255, 255, 255, 0.025) 1px,
@@ -70,24 +74,41 @@ body {
       rgba(255, 255, 255, 0.025) 1px,
       transparent 1px
     );
-  background-size: 48px 48px;
+
+  background-size:
+    48px 48px;
+
   pointer-events: none;
 }
 
 
+/* =========================
+   JOIN BACKGROUND ORBS
+========================= */
+
 .join-orb {
   position: absolute;
+
   border-radius: 50%;
+
   filter: blur(80px);
+
   opacity: 0.5;
-  animation: floatOrb 12s ease-in-out infinite;
+
+  animation:
+    floatOrb
+    12s
+    ease-in-out
+    infinite;
 }
 
 
 .orb-one {
   width: 320px;
   height: 320px;
+
   background: #2563eb;
+
   top: -120px;
   left: -100px;
 }
@@ -96,9 +117,12 @@ body {
 .orb-two {
   width: 380px;
   height: 380px;
+
   background: #7c3aed;
+
   bottom: -180px;
   right: -100px;
+
   animation-delay: 3s;
 }
 
@@ -106,10 +130,14 @@ body {
 .orb-three {
   width: 200px;
   height: 200px;
+
   background: #0891b2;
+
   top: 45%;
   left: 50%;
+
   opacity: 0.18;
+
   animation-delay: 6s;
 }
 
@@ -118,15 +146,20 @@ body {
 
   0%,
   100% {
+
     transform:
       translate(0, 0)
       scale(1);
+
   }
 
+
   50% {
+
     transform:
       translate(40px, -30px)
       scale(1.1);
+
   }
 
 }
@@ -138,6 +171,7 @@ body {
 
 .join-nav {
   position: relative;
+
   z-index: 5;
 
   height: 86px;
@@ -166,21 +200,31 @@ body {
 
 .join-logo {
   display: flex;
+
   align-items: center;
+
   gap: 12px;
 
   font-size: 24px;
+
   font-weight: 800;
+
   letter-spacing: -1px;
 }
 
+
+/* =========================
+   BRAND ICON
+========================= */
 
 .brand-icon {
   width: 44px;
   height: 44px;
 
   display: flex;
+
   align-items: center;
+
   justify-content: center;
 
   border-radius: 14px;
@@ -195,6 +239,7 @@ body {
   color: white;
 
   font-size: 22px;
+
   font-weight: 800;
 
   box-shadow:
@@ -205,7 +250,9 @@ body {
 
 .nav-live-status {
   display: flex;
+
   align-items: center;
+
   gap: 9px;
 
   color: #a8b6cc;
@@ -227,22 +274,36 @@ body {
     0 0 0 6px
     rgba(34, 197, 94, 0.1);
 
-  animation: livePulse 1.8s infinite;
+  animation:
+    livePulse
+    1.8s
+    infinite;
 }
 
 
 @keyframes livePulse {
 
   0% {
-    transform: scale(0.9);
+
+    transform:
+      scale(0.9);
+
   }
+
 
   50% {
-    transform: scale(1.2);
+
+    transform:
+      scale(1.2);
+
   }
 
+
   100% {
-    transform: scale(0.9);
+
+    transform:
+      scale(0.9);
+
   }
 
 }
@@ -254,6 +315,7 @@ body {
 
 .join-main {
   position: relative;
+
   z-index: 2;
 
   min-height:
@@ -280,24 +342,34 @@ body {
 
 
 .join-hero {
+
   animation:
     slideFromLeft
-    0.8s ease;
+    0.8s
+    ease;
+
 }
 
 
 @keyframes slideFromLeft {
 
   from {
+
     opacity: 0;
+
     transform:
       translateX(-40px);
+
   }
 
+
   to {
+
     opacity: 1;
+
     transform:
       translateX(0);
+
   }
 
 }
@@ -333,6 +405,7 @@ body {
 
 .spark {
   margin-right: 7px;
+
   color: #fbbf24;
 }
 
@@ -391,13 +464,16 @@ body {
 
 .feature-list {
   display: flex;
+
   flex-direction: column;
+
   gap: 20px;
 }
 
 
 .feature-item {
   display: flex;
+
   align-items: center;
 
   gap: 18px;
@@ -415,11 +491,13 @@ body {
 
 
 .feature-item:hover {
+
   transform:
     translateX(10px);
 
   background:
     rgba(255, 255, 255, 0.04);
+
 }
 
 
@@ -430,6 +508,7 @@ body {
   display: flex;
 
   align-items: center;
+
   justify-content: center;
 
   border-radius: 15px;
@@ -451,12 +530,14 @@ body {
 
 .feature-item h3 {
   font-size: 15px;
+
   margin-bottom: 5px;
 }
 
 
 .feature-item p {
   color: #8798b1;
+
   font-size: 13px;
 }
 
@@ -466,26 +547,34 @@ body {
 ========================= */
 
 .join-card-container {
+
   animation:
     slideFromRight
-    0.9s ease;
+    0.9s
+    ease;
+
 }
 
 
 @keyframes slideFromRight {
 
   from {
+
     opacity: 0;
 
     transform:
       translateX(40px);
+
   }
 
+
   to {
+
     opacity: 1;
 
     transform:
       translateX(0);
+
   }
 
 }
@@ -537,6 +626,7 @@ body {
 
 .join-card-header {
   position: relative;
+
   text-align: center;
 
   margin-bottom: 35px;
@@ -555,6 +645,7 @@ body {
   display: flex;
 
   align-items: center;
+
   justify-content: center;
 
   border-radius: 18px;
@@ -576,12 +667,14 @@ body {
 
 .join-card h2 {
   font-size: 26px;
+
   margin-bottom: 10px;
 }
 
 
 .join-card-header p {
   color: #91a2bb;
+
   font-size: 14px;
 }
 
@@ -610,6 +703,7 @@ body {
 
 .input-wrapper {
   display: flex;
+
   align-items: center;
 
   gap: 10px;
@@ -630,7 +724,8 @@ body {
     rgba(255, 255, 255, 0.09);
 
   transition:
-    0.25s ease;
+    0.25s
+    ease;
 }
 
 
@@ -645,6 +740,7 @@ body {
 
   background:
     rgba(255, 255, 255, 0.06);
+
 }
 
 
@@ -691,6 +787,7 @@ body {
   display: flex;
 
   align-items: center;
+
   justify-content: center;
 
   gap: 15px;
@@ -722,6 +819,7 @@ body {
   box-shadow:
     0 18px 40px
     rgba(79, 70, 229, 0.35);
+
 }
 
 
@@ -734,13 +832,14 @@ body {
 
 
 .join-button:hover .join-arrow {
+
   transform:
     translateX(5px);
+
 }
 
 
 .join-card-footer {
-
   margin-top: 25px;
 
   display: flex;
@@ -773,6 +872,7 @@ body {
 
 .join-footer {
   position: relative;
+
   z-index: 2;
 
   padding:
@@ -798,7 +898,6 @@ body {
 ========================= */
 
 .app-shell {
-
   position: relative;
 
   height: 100vh;
@@ -820,7 +919,6 @@ body {
 
 
 .background-glow {
-
   position: absolute;
 
   border-radius: 50%;
@@ -832,7 +930,6 @@ body {
 
 
 .glow-one {
-
   width: 300px;
   height: 300px;
 
@@ -845,7 +942,6 @@ body {
 
 
 .glow-two {
-
   width: 300px;
   height: 300px;
 
@@ -862,10 +958,9 @@ body {
 ========================= */
 
 .top-nav {
-
   position: relative;
 
-  z-index: 10;
+  z-index: 30;
 
   min-height: 82px;
 
@@ -895,7 +990,6 @@ body {
 
 
 .brand-section {
-
   display: flex;
 
   align-items: center;
@@ -905,7 +999,6 @@ body {
 
 
 .brand-text h1 {
-
   font-family:
     "Space Grotesk",
     sans-serif;
@@ -917,7 +1010,6 @@ body {
 
 
 .brand-text p {
-
   margin-top: 3px;
 
   color: #8291a8;
@@ -931,7 +1023,6 @@ body {
 ========================= */
 
 .room-status {
-
   display: flex;
 
   align-items: center;
@@ -947,7 +1038,6 @@ body {
 
 
 .room-badge {
-
   margin-left: 8px;
 
   padding:
@@ -972,7 +1062,6 @@ body {
 ========================= */
 
 .nav-actions {
-
   justify-self: end;
 
   display: flex;
@@ -982,7 +1071,6 @@ body {
 
 
 .header-button {
-
   height: 42px;
 
   padding:
@@ -998,12 +1086,13 @@ body {
   font-weight: 600;
 
   transition:
-    all 0.2s ease;
+    all
+    0.2s
+    ease;
 }
 
 
 .header-button.secondary {
-
   background:
     rgba(255, 255, 255, 0.04);
 
@@ -1022,6 +1111,7 @@ body {
 
   transform:
     translateY(-2px);
+
 }
 
 
@@ -1035,6 +1125,7 @@ body {
     rgba(239, 68, 68, 0.08);
 
   color: #fca5a5;
+
 }
 
 
@@ -1042,15 +1133,38 @@ body {
 
   background:
     rgba(239, 68, 68, 0.16);
+
+}
+
+
+.header-button.logout {
+
+  border:
+    1px solid
+    rgba(251, 146, 60, 0.25);
+
+  background:
+    rgba(249, 115, 22, 0.08);
+
+  color:
+    #fdba74;
+
+}
+
+
+.header-button.logout:hover {
+
+  background:
+    rgba(249, 115, 22, 0.16);
+
 }
 
 
 /* =========================
-   WORKSPACE PANELS
+   WORKSPACE
 ========================= */
 
 .workspace {
-
   position: relative;
 
   z-index: 2;
@@ -1069,6 +1183,97 @@ body {
   padding: 18px;
 }
 
+
+/* =========================
+   REPLAY PANEL
+========================= */
+
+.replay-workspace-panel {
+
+  position: absolute;
+
+  top: 18px;
+
+  right: 18px;
+
+  bottom: 18px;
+
+  width:
+    min(430px, calc(100vw - 36px));
+
+  z-index: 20;
+
+  overflow-y: auto;
+
+  border-radius: 20px;
+
+  background:
+    linear-gradient(
+      145deg,
+      rgba(19, 29, 47, 0.99),
+      rgba(11, 19, 32, 0.99)
+    );
+
+  border:
+    1px solid
+    rgba(255, 255, 255, 0.1);
+
+  box-shadow:
+    -20px 20px 60px
+    rgba(0, 0, 0, 0.45);
+
+  animation:
+    slideReplayPanel
+    0.3s
+    ease;
+
+}
+
+
+@keyframes slideReplayPanel {
+
+  from {
+
+    opacity: 0;
+
+    transform:
+      translateX(30px);
+
+  }
+
+
+  to {
+
+    opacity: 1;
+
+    transform:
+      translateX(0);
+
+  }
+
+}
+
+
+.replay-workspace-panel::-webkit-scrollbar {
+
+  width: 6px;
+
+}
+
+
+.replay-workspace-panel::-webkit-scrollbar-thumb {
+
+  background:
+    rgba(255, 255, 255, 0.15);
+
+  border-radius: 10px;
+
+}
+
+
+/* =========================
+   WORKSPACE PANELS
+========================= */
 
 .workspace-panel {
 
@@ -1140,6 +1345,7 @@ body {
   display: flex;
 
   align-items: center;
+
   justify-content: center;
 
   border-radius: 14px;
@@ -1228,7 +1434,9 @@ body {
 
   animation:
     livePulse
-    1.5s infinite;
+    1.5s
+    infinite;
+
 }
 
 
@@ -1243,6 +1451,7 @@ body {
   min-height: 0;
 
   overflow: hidden;
+
 }
 
 
@@ -1261,6 +1470,7 @@ body {
   justify-content: center;
 
   gap: 8px;
+
 }
 
 
@@ -1276,6 +1486,7 @@ body {
       rgba(255, 255, 255, 0.12),
       transparent
     );
+
 }
 
 
@@ -1287,6 +1498,7 @@ body {
   display: flex;
 
   align-items: center;
+
   justify-content: center;
 
   border-radius: 50%;
@@ -1301,6 +1513,7 @@ body {
   color: #71839c;
 
   font-size: 12px;
+
 }
 
 
@@ -1312,7 +1525,7 @@ body {
 
   position: relative;
 
-  z-index: 10;
+  z-index: 30;
 
   min-height: 36px;
 
@@ -1339,6 +1552,7 @@ body {
   color: #74869f;
 
   font-size: 10px;
+
 }
 
 
@@ -1349,21 +1563,28 @@ body {
   align-items: center;
 
   gap: 7px;
+
 }
 
 
 .status-left strong {
+
   color: #c5d2e3;
+
 }
 
 
 .status-center {
+
   text-align: center;
+
 }
 
 
 .status-right {
+
   text-align: right;
+
 }
 
 
@@ -1375,62 +1596,86 @@ body {
 
   .join-main {
 
-    grid-template-columns: 1fr;
+    grid-template-columns:
+      1fr;
 
     gap: 40px;
 
     padding:
       50px
       30px;
+
   }
 
 
   .join-hero {
+
     text-align: center;
+
   }
 
 
   .hero-badge {
+
     margin-left: auto;
+
     margin-right: auto;
+
   }
 
 
   .hero-description {
+
     margin-left: auto;
+
     margin-right: auto;
+
   }
 
 
   .feature-list {
+
     max-width: 600px;
+
     margin: auto;
+
   }
 
 
   .join-card-container {
+
     max-width: 560px;
+
     width: 100%;
+
     margin: auto;
+
   }
 
 
   .workspace {
 
-    grid-template-columns: 1fr;
+    grid-template-columns:
+      1fr;
 
     overflow-y: auto;
+
   }
 
 
   .workspace-divider {
+
     display: none;
+
   }
 
 
   .workspace-panel {
+
     min-height: 600px;
+
     margin-bottom: 18px;
+
   }
 
 
@@ -1441,20 +1686,42 @@ body {
       auto;
 
     gap: 15px;
+
   }
 
 
   .room-status {
+
     display: none;
+
+  }
+
+
+  .replay-workspace-panel {
+
+    top: 18px;
+
+    right: 18px;
+
+    width: 400px;
+
+    z-index: 40;
+
   }
 
 }
 
 
+/* =========================
+   MOBILE
+========================= */
+
 @media (max-width: 700px) {
 
   body {
+
     overflow: auto;
+
   }
 
 
@@ -1465,11 +1732,14 @@ body {
     padding:
       0
       20px;
+
   }
 
 
   .nav-live-status {
+
     display: none;
+
   }
 
 
@@ -1478,6 +1748,7 @@ body {
     padding:
       40px
       20px;
+
   }
 
 
@@ -1486,11 +1757,16 @@ body {
     font-size: 48px;
 
     letter-spacing: -2px;
+
   }
 
 
   .join-card {
-    padding: 30px 22px;
+
+    padding:
+      30px
+      22px;
+
   }
 
 
@@ -1501,6 +1777,7 @@ body {
       20px;
 
     font-size: 10px;
+
   }
 
 
@@ -1511,48 +1788,80 @@ body {
     padding:
       10px
       15px;
+
   }
 
 
   .brand-text p {
+
     display: none;
+
   }
 
 
   .header-button.secondary {
+
     display: none;
+
   }
 
 
   .workspace {
+
     padding: 10px;
+
   }
 
 
   .panel-header {
+
     padding: 14px;
+
   }
 
 
   .panel-live {
+
     display: none;
+
   }
 
 
   .status-bar {
-    grid-template-columns: 1fr;
+
+    grid-template-columns:
+      1fr;
 
     padding:
       10px
       15px;
 
     text-align: center;
+
   }
 
 
   .status-center,
   .status-right {
+
     display: none;
+
+  }
+
+
+  .replay-workspace-panel {
+
+    top: 10px;
+
+    right: 10px;
+
+    bottom: 10px;
+
+    width:
+      calc(100vw - 20px);
+
+    z-index: 50;
+
   }
 
 }

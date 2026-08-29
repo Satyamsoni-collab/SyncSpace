@@ -28,14 +28,11 @@ function Whiteboard({
   userName = `User-${Math.floor(Math.random() * 1000)}`
 }) {
 
-
   const stageRef = useRef(null);
 
   const drawingRef = useRef(false);
 
   const currentShapeRef = useRef(null);
-
-  const remoteShapesRef = useRef([]);
 
   const animationFrameRef = useRef(null);
 
@@ -73,9 +70,7 @@ function Whiteboard({
 
   useEffect(() => {
 
-
     const updateSize = () => {
-
 
       const container =
         document.querySelector(
@@ -92,7 +87,6 @@ function Whiteboard({
         width: container.clientWidth,
         height: container.clientHeight
       });
-
 
     };
 
@@ -115,30 +109,69 @@ function Whiteboard({
 
     };
 
-
   }, []);
 
 
 
   /*
     Connect to Socket Server
+    and restore workspace data
   */
 
   useEffect(() => {
 
 
-    connectToServer(
-      roomId,
-      userName
-    );
+    /*
+      RESTORE SAVED WORKSPACE
+    */
 
+    const handleWorkspaceState =
+      (workspace) => {
+
+        if (!workspace) {
+          return;
+        }
+
+
+        const savedShapes =
+          workspace.whiteboardData;
+
+
+        if (
+          Array.isArray(savedShapes)
+        ) {
+
+          setShapes(
+            savedShapes
+          );
+
+        }
+
+      };
+
+
+
+    /*
+      CONNECT
+    */
 
     const handleConnect = () => {
 
       setConnected(true);
 
+
+      connectToServer(
+        roomId,
+        userName
+      );
+
     };
 
+
+
+    /*
+      DISCONNECT
+    */
 
     const handleDisconnect = () => {
 
@@ -147,9 +180,13 @@ function Whiteboard({
     };
 
 
+
+    /*
+      CURRENT ROOM USERS
+    */
+
     const handleRoomUsers =
       (users) => {
-
 
         const validUsers =
           Array.isArray(users)
@@ -165,13 +202,16 @@ function Whiteboard({
           validUsers
         );
 
-
       };
 
 
+
+    /*
+      NEW USER JOINED
+    */
+
     const handleUserJoined =
       (user) => {
-
 
         if (
           !user ||
@@ -183,7 +223,6 @@ function Whiteboard({
 
         setConnectedUsers(
           (previousUsers) => {
-
 
             const safeUsers =
               Array.isArray(previousUsers)
@@ -213,17 +252,19 @@ function Whiteboard({
               user
             ];
 
-
           }
         );
-
 
       };
 
 
+
+    /*
+      USER LEFT
+    */
+
     const handleUserLeft =
       ({ id }) => {
-
 
         if (!id) {
           return;
@@ -232,7 +273,6 @@ function Whiteboard({
 
         setConnectedUsers(
           (previousUsers) => {
-
 
             const safeUsers =
               Array.isArray(previousUsers)
@@ -247,17 +287,19 @@ function Whiteboard({
                 user.id !== id
             );
 
-
           }
         );
-
 
       };
 
 
+
+    /*
+      RECEIVE NEW WHITEBOARD SHAPE
+    */
+
     const handleWhiteboardDraw =
       ({ shape }) => {
-
 
         if (!shape) {
           return;
@@ -273,19 +315,26 @@ function Whiteboard({
           ]
         );
 
-
       };
 
+
+
+    /*
+      CLEAR WHITEBOARD
+    */
 
     const handleWhiteboardClear =
       () => {
 
-
         setShapes([]);
-
 
       };
 
+
+
+    /*
+      REGISTER SOCKET EVENTS
+    */
 
     socket.on(
       "connect",
@@ -296,6 +345,12 @@ function Whiteboard({
     socket.on(
       "disconnect",
       handleDisconnect
+    );
+
+
+    socket.on(
+      "workspace-state",
+      handleWorkspaceState
     );
 
 
@@ -329,15 +384,35 @@ function Whiteboard({
     );
 
 
+
+    /*
+      IF ALREADY CONNECTED
+      JOIN THE ROOM
+    */
+
     if (socket.connected) {
 
       setConnected(true);
 
+
+      connectToServer(
+        roomId,
+        userName
+      );
+
+    } else {
+
+      socket.connect();
+
     }
 
 
-    return () => {
 
+    /*
+      CLEANUP
+    */
+
+    return () => {
 
       socket.off(
         "connect",
@@ -348,6 +423,12 @@ function Whiteboard({
       socket.off(
         "disconnect",
         handleDisconnect
+      );
+
+
+      socket.off(
+        "workspace-state",
+        handleWorkspaceState
       );
 
 
@@ -380,7 +461,6 @@ function Whiteboard({
         handleWhiteboardClear
       );
 
-
     };
 
 
@@ -397,7 +477,6 @@ function Whiteboard({
 
   const handleMouseDown =
     useCallback((event) => {
-
 
       const stage =
         event.target.getStage();
@@ -418,8 +497,11 @@ function Whiteboard({
       let newShape;
 
 
-      if (tool === "pen") {
+      /*
+        PEN
+      */
 
+      if (tool === "pen") {
 
         newShape = {
 
@@ -439,14 +521,16 @@ function Whiteboard({
 
         };
 
-
       }
 
+
+      /*
+        RECTANGLE
+      */
 
       else if (
         tool === "rectangle"
       ) {
-
 
         newShape = {
 
@@ -469,14 +553,16 @@ function Whiteboard({
 
         };
 
-
       }
 
+
+      /*
+        TEXT
+      */
 
       else if (
         tool === "text"
       ) {
-
 
         const text =
           window.prompt(
@@ -572,14 +658,10 @@ function Whiteboard({
 
   /*
     Drawing Movement
-
-    Optimized with requestAnimationFrame
-    to reduce lag.
   */
 
   const handleMouseMove =
     useCallback((event) => {
-
 
       if (
         !drawingRef.current ||
@@ -599,7 +681,6 @@ function Whiteboard({
       animationFrameRef.current =
         requestAnimationFrame(
           () => {
-
 
             const stage =
               event.target.getStage();
@@ -621,7 +702,6 @@ function Whiteboard({
 
             setShapes(
               (previousShapes) => {
-
 
                 const safeShapes =
                   Array.isArray(
@@ -672,7 +752,6 @@ function Whiteboard({
                   shape.type === "pen"
                 ) {
 
-
                   shape.points = [
 
                     ...shape.points,
@@ -683,7 +762,6 @@ function Whiteboard({
 
                   ];
 
-
                 }
 
 
@@ -691,7 +769,6 @@ function Whiteboard({
                   shape.type ===
                   "rectangle"
                 ) {
-
 
                   shape.width =
                     pointer.x -
@@ -701,7 +778,6 @@ function Whiteboard({
                   shape.height =
                     pointer.y -
                     shape.y;
-
 
                 }
 
@@ -716,14 +792,12 @@ function Whiteboard({
 
                 return updatedShapes;
 
-
               }
             );
 
 
             animationFrameRef.current =
               null;
-
 
           }
         );
@@ -739,7 +813,6 @@ function Whiteboard({
 
   const handleMouseUp =
     useCallback(() => {
-
 
       if (
         !drawingRef.current ||
@@ -760,14 +833,6 @@ function Whiteboard({
       currentShapeRef.current =
         null;
 
-
-      /*
-        Send only when drawing
-        is completed.
-
-        This prevents hundreds of
-        socket events while using pen.
-      */
 
       socket.emit(
         "whiteboard-draw",
@@ -795,7 +860,6 @@ function Whiteboard({
   const clearCanvas =
     useCallback(() => {
 
-
       setShapes([]);
 
 
@@ -822,16 +886,18 @@ function Whiteboard({
   const renderShape =
     (shape) => {
 
-
       if (!shape) {
         return null;
       }
 
 
+      /*
+        PEN
+      */
+
       if (
         shape.type === "pen"
       ) {
-
 
         return (
 
@@ -862,15 +928,17 @@ function Whiteboard({
 
         );
 
-
       }
 
+
+      /*
+        RECTANGLE
+      */
 
       if (
         shape.type ===
         "rectangle"
       ) {
-
 
         return (
 
@@ -899,14 +967,16 @@ function Whiteboard({
 
         );
 
-
       }
 
+
+      /*
+        TEXT
+      */
 
       if (
         shape.type === "text"
       ) {
-
 
         return (
 
@@ -931,21 +1001,17 @@ function Whiteboard({
 
         );
 
-
       }
 
 
       return null;
-
 
     };
 
 
 
   /*
-    Count Users Safely
-
-    Current user + valid remote users
+    COUNT CONNECTED USERS
   */
 
   const totalUsers =
@@ -1036,11 +1102,9 @@ function Whiteboard({
 
           <Layer>
 
-
             {shapes.map(
               renderShape
             )}
-
 
           </Layer>
 
@@ -1054,7 +1118,6 @@ function Whiteboard({
     </div>
 
   );
-
 
 }
 

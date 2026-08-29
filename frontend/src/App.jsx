@@ -1,120 +1,512 @@
-import React, { useState } from "react";
+import React, {
+  useEffect,
+  useState
+} from "react";
 
 import "./App.css";
 
+import Login from "./components/Login";
+import Register from "./components/Register";
 import JoinRoom from "./components/JoinRoom";
+
 import Whiteboard from "./components/whiteboard/Whiteboard";
 import CodeEditor from "./components/editor/CodeEditor";
+import ReplayPanel from "./components/replay/ReplayPanel";
+
+import {
+  socket
+} from "./services/socket";
 
 
 function App() {
 
-  const [workspace, setWorkspace] = useState(null);
+
+  const [page, setPage] =
+    useState("login");
 
 
-  const handleJoinRoom = (userName, roomId) => {
-
-    setWorkspace({
-      userName,
-      roomId
-    });
-
-  };
+  const [user, setUser] =
+    useState(null);
 
 
-  const handleLeaveRoom = () => {
-
-    const confirmLeave = window.confirm(
-      "Are you sure you want to leave this workspace?"
-    );
+  const [workspace, setWorkspace] =
+    useState(null);
 
 
-    if (confirmLeave) {
+  /*
+    REPLAY PANEL STATE
+  */
 
-      window.location.reload();
-
-    }
-
-  };
-
-
-  const handleShare = async () => {
-
-    if (!workspace) {
-      return;
-    }
+  const [showReplay, setShowReplay] =
+    useState(false);
 
 
-    const shareText =
-      `Join my SyncSpace workspace!
 
-Room ID: ${workspace.roomId}
+  /*
+    CHECK LOGIN DATA
+    WHEN PAGE REFRESHES
+  */
 
-Open SyncSpace and enter this Room ID to collaborate with me.`;
+  useEffect(() => {
 
 
-    try {
-
-      await navigator.clipboard.writeText(
-        shareText
+    const savedToken =
+      localStorage.getItem(
+        "syncspaceToken"
       );
 
 
-      alert(
-        "Room details copied to clipboard!"
+    const savedUser =
+      localStorage.getItem(
+        "syncspaceUser"
       );
 
-    } catch (error) {
 
-      alert(
-        `Room ID: ${workspace.roomId}`
-      );
+    if (
+      savedToken &&
+      savedUser
+    ) {
+
+
+      try {
+
+
+        const parsedUser =
+          JSON.parse(
+            savedUser
+          );
+
+
+        setUser(
+          parsedUser
+        );
+
+
+        setPage(
+          "join-room"
+        );
+
+
+      } catch (error) {
+
+
+        console.error(
+          "Failed to restore user session:",
+          error
+        );
+
+
+        localStorage.removeItem(
+          "syncspaceToken"
+        );
+
+
+        localStorage.removeItem(
+          "syncspaceUser"
+        );
+
+
+        setUser(
+          null
+        );
+
+
+        setPage(
+          "login"
+        );
+
+
+      }
+
 
     }
 
-  };
+
+  }, []);
 
 
-  if (!workspace) {
+
+  /*
+    LOGIN SUCCESS
+  */
+
+  const handleLoginSuccess =
+    (loggedInUser) => {
+
+
+      setUser(
+        loggedInUser
+      );
+
+
+      setPage(
+        "join-room"
+      );
+
+
+    };
+
+
+
+  /*
+    JOIN ROOM
+  */
+
+  const handleJoinRoom =
+    (userName, roomId) => {
+
+
+      setWorkspace({
+        userName,
+        roomId
+      });
+
+
+      setShowReplay(
+        false
+      );
+
+
+      setPage(
+        "workspace"
+      );
+
+
+    };
+
+
+
+  /*
+    LEAVE ROOM
+  */
+
+  const handleLeaveRoom =
+    () => {
+
+
+      const confirmLeave =
+        window.confirm(
+          "Are you sure you want to leave this workspace?"
+        );
+
+
+      if (!confirmLeave) {
+
+        return;
+
+      }
+
+
+      /*
+        NOTIFY SOCKET SERVER
+      */
+
+      if (
+        workspace?.roomId &&
+        socket.connected
+      ) {
+
+
+        socket.emit(
+          "leave-room",
+          {
+
+            roomId:
+              workspace.roomId
+
+          }
+        );
+
+
+      }
+
+
+      /*
+        CLOSE REPLAY PANEL
+      */
+
+      setShowReplay(
+        false
+      );
+
+
+      /*
+        CLEAR CURRENT WORKSPACE
+      */
+
+      setWorkspace(
+        null
+      );
+
+
+      /*
+        RETURN TO JOIN ROOM PAGE
+      */
+
+      setPage(
+        "join-room"
+      );
+
+
+    };
+
+
+
+  /*
+    LOGOUT
+  */
+
+  const handleLogout =
+    () => {
+
+
+      const confirmLogout =
+        window.confirm(
+          "Are you sure you want to logout?"
+        );
+
+
+      if (!confirmLogout) {
+
+        return;
+
+      }
+
+
+      /*
+        LEAVE ROOM FIRST
+      */
+
+      if (
+        workspace?.roomId &&
+        socket.connected
+      ) {
+
+
+        socket.emit(
+          "leave-room",
+          {
+
+            roomId:
+              workspace.roomId
+
+          }
+        );
+
+
+      }
+
+
+      /*
+        REMOVE LOGIN DATA
+      */
+
+      localStorage.removeItem(
+        "syncspaceToken"
+      );
+
+
+      localStorage.removeItem(
+        "syncspaceUser"
+      );
+
+
+      /*
+        CLEAR STATE
+      */
+
+      setUser(
+        null
+      );
+
+
+      setWorkspace(
+        null
+      );
+
+
+      setShowReplay(
+        false
+      );
+
+
+      /*
+        RETURN TO LOGIN
+      */
+
+      setPage(
+        "login"
+      );
+
+
+    };
+
+
+
+  /*
+    SHARE ROOM
+  */
+
+  const handleShare =
+    async () => {
+
+
+      if (!workspace) {
+
+        return;
+
+      }
+
+
+      const shareText =
+        `Join my SyncSpace workspace!
+
+Room ID: ${workspace.roomId}`;
+
+
+      try {
+
+
+        await navigator.clipboard.writeText(
+          shareText
+        );
+
+
+        alert(
+          "Room details copied to clipboard!"
+        );
+
+
+      } catch (error) {
+
+
+        alert(
+          `Room ID: ${workspace.roomId}`
+        );
+
+
+      }
+
+
+    };
+
+
+
+  /*
+    LOGIN PAGE
+  */
+
+  if (page === "login") {
+
 
     return (
 
-      <JoinRoom
-        onJoin={handleJoinRoom}
+      <Login
+
+        onSwitchToRegister={() =>
+          setPage("register")
+        }
+
+        onLoginSuccess={
+          handleLoginSuccess
+        }
+
       />
 
     );
 
+
   }
 
+
+
+  /*
+    REGISTER PAGE
+  */
+
+  if (page === "register") {
+
+
+    return (
+
+      <Register
+
+        onSwitchToLogin={() =>
+          setPage("login")
+        }
+
+      />
+
+    );
+
+
+  }
+
+
+
+  /*
+    JOIN ROOM PAGE
+  */
+
+  if (page === "join-room") {
+
+
+    return (
+
+      <JoinRoom
+
+        onJoin={
+          handleJoinRoom
+        }
+
+        userName={
+          user?.name || ""
+        }
+
+      />
+
+    );
+
+
+  }
+
+
+
+  /*
+    MAIN WORKSPACE
+  */
 
   return (
 
     <div className="app-shell">
 
 
-      {/* Animated Background */}
+      {/* Background Effects */}
 
-      <div className="background-glow glow-one"></div>
-
-      <div className="background-glow glow-two"></div>
-
-      <div className="background-grid"></div>
+      <div
+        className="background-glow glow-one"
+      ></div>
 
 
-      {/* Header */}
+      <div
+        className="background-glow glow-two"
+      ></div>
+
+
+
+      {/* HEADER */}
 
       <header className="top-nav">
 
-
-        {/* Brand */}
 
         <div className="brand-section">
 
 
           <div className="brand-icon">
 
-            <span>S</span>
+            <span>
+              S
+            </span>
 
           </div>
 
@@ -136,25 +528,24 @@ Open SyncSpace and enter this Room ID to collaborate with me.`;
 
 
 
-        {/* Room Status */}
-
         <div className="room-status">
 
 
-          <div className="live-status">
+          <div
+            className="live-dot"
+          ></div>
 
-            <span className="live-dot"></span>
 
-            <span>
-              Live Collaboration
-            </span>
-
-          </div>
+          <span>
+            Live Collaboration
+          </span>
 
 
           <span className="room-badge">
 
-            Room: {workspace.roomId}
+            Room:
+            {" "}
+            {workspace?.roomId}
 
           </span>
 
@@ -163,14 +554,16 @@ Open SyncSpace and enter this Room ID to collaborate with me.`;
 
 
 
-        {/* Actions */}
-
         <div className="nav-actions">
 
 
+          {/* SHARE ROOM */}
+
           <button
             className="header-button secondary"
-            onClick={handleShare}
+            onClick={
+              handleShare
+            }
           >
 
             🔗 Share Room
@@ -179,12 +572,50 @@ Open SyncSpace and enter this Room ID to collaborate with me.`;
 
 
 
+          {/* HISTORY BUTTON */}
+
+          <button
+            className="header-button secondary"
+            onClick={() =>
+              setShowReplay(
+                !showReplay
+              )
+            }
+          >
+
+            {showReplay
+              ? "✕ Close History"
+              : "📜 History"}
+
+          </button>
+
+
+
+          {/* LEAVE ROOM */}
+
           <button
             className="header-button leave"
-            onClick={handleLeaveRoom}
+            onClick={
+              handleLeaveRoom
+            }
           >
 
             Leave
+
+          </button>
+
+
+
+          {/* LOGOUT */}
+
+          <button
+            className="header-button logout"
+            onClick={
+              handleLogout
+            }
+          >
+
+            Logout
 
           </button>
 
@@ -196,14 +627,88 @@ Open SyncSpace and enter this Room ID to collaborate with me.`;
 
 
 
-      {/* Main Workspace */}
+      {/* =========================
+          REPLAY HISTORY POPUP
+      ========================= */}
+
+      {showReplay && (
+
+        <div className="replay-overlay">
+
+
+          <div className="replay-popup">
+
+
+            <div className="replay-popup-header">
+
+
+              <div>
+
+
+                <h2>
+                  📜 Workspace History
+                </h2>
+
+
+                <p>
+
+                  Room:
+                  {" "}
+                  {workspace?.roomId}
+
+                </p>
+
+
+              </div>
+
+
+
+              <button
+                className="replay-close-button"
+                onClick={() =>
+                  setShowReplay(false)
+                }
+              >
+
+                ✕ Close
+
+              </button>
+
+
+            </div>
+
+
+
+            <ReplayPanel
+
+              roomId={
+                workspace?.roomId
+              }
+
+            />
+
+
+          </div>
+
+
+        </div>
+
+      )}
+
+
+
+      {/* =========================
+          MAIN WORKSPACE
+      ========================= */}
 
       <main className="workspace">
 
 
-        {/* ================= WHITEBOARD ================= */}
+        {/* WHITEBOARD */}
 
-        <section className="workspace-panel whiteboard-panel">
+        <section
+          className="workspace-panel whiteboard-panel"
+        >
 
 
           <div className="panel-header">
@@ -238,9 +743,14 @@ Open SyncSpace and enter this Room ID to collaborate with me.`;
 
             <div className="panel-live">
 
-              <span className="pulse-dot"></span>
+
+              <span
+                className="pulse-dot"
+              ></span>
+
 
               LIVE
+
 
             </div>
 
@@ -252,14 +762,16 @@ Open SyncSpace and enter this Room ID to collaborate with me.`;
           <div className="panel-content">
 
 
-            {/* IMPORTANT:
-                Send the same roomId and userName
-                to the Whiteboard
-            */}
-
             <Whiteboard
-              roomId={workspace.roomId}
-              userName={workspace.userName}
+
+              roomId={
+                workspace?.roomId
+              }
+
+              userName={
+                workspace?.userName
+              }
+
             />
 
 
@@ -270,12 +782,14 @@ Open SyncSpace and enter this Room ID to collaborate with me.`;
 
 
 
-        {/* Workspace Divider */}
+        {/* DIVIDER */}
 
         <div className="workspace-divider">
 
 
-          <div className="divider-line"></div>
+          <div
+            className="divider-line"
+          ></div>
 
 
           <div className="divider-circle">
@@ -285,16 +799,20 @@ Open SyncSpace and enter this Room ID to collaborate with me.`;
           </div>
 
 
-          <div className="divider-line"></div>
+          <div
+            className="divider-line"
+          ></div>
 
 
         </div>
 
 
 
-        {/* ================= CODE EDITOR ================= */}
+        {/* CODE EDITOR */}
 
-        <section className="workspace-panel editor-panel">
+        <section
+          className="workspace-panel editor-panel"
+        >
 
 
           <div className="panel-header">
@@ -329,9 +847,14 @@ Open SyncSpace and enter this Room ID to collaborate with me.`;
 
             <div className="panel-live">
 
-              <span className="pulse-dot"></span>
+
+              <span
+                className="pulse-dot"
+              ></span>
+
 
               CONNECTED
+
 
             </div>
 
@@ -343,14 +866,16 @@ Open SyncSpace and enter this Room ID to collaborate with me.`;
           <div className="panel-content">
 
 
-            {/* IMPORTANT:
-                Send the same roomId and userName
-                to the Code Editor
-            */}
-
             <CodeEditor
-              roomId={workspace.roomId}
-              userName={workspace.userName}
+
+              roomId={
+                workspace?.roomId
+              }
+
+              userName={
+                workspace?.userName
+              }
+
             />
 
 
@@ -364,7 +889,7 @@ Open SyncSpace and enter this Room ID to collaborate with me.`;
 
 
 
-      {/* Bottom Status Bar */}
+      {/* FOOTER */}
 
       <footer className="status-bar">
 
@@ -372,16 +897,19 @@ Open SyncSpace and enter this Room ID to collaborate with me.`;
         <div className="status-left">
 
 
-          <span className="status-online-dot"></span>
+          <span
+            className="status-online-dot"
+          ></span>
 
 
-          <span>
-            You are collaborating as
-          </span>
+          You are collaborating as
 
 
           <strong>
-            {workspace.userName}
+
+            {" "}
+            {workspace?.userName}
+
           </strong>
 
 
@@ -410,6 +938,7 @@ Open SyncSpace and enter this Room ID to collaborate with me.`;
     </div>
 
   );
+
 
 }
 
