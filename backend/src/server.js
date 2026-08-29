@@ -4,6 +4,7 @@ import express from "express";
 import http from "http";
 import cors from "cors";
 import { Server } from "socket.io";
+import { socketHandler } from "./socket/socketHandler.js";
 
 import connectDatabase from "./config/database.js";
 
