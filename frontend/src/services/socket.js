@@ -1,54 +1,29 @@
 import { io } from "socket.io-client";
 
+// Backend is running on port 5001
+const SOCKET_URL = "http://localhost:5001";
 
-const SOCKET_URL = "http://localhost:5000";
+export const socket = io(SOCKET_URL, {
+  autoConnect: false,
+});
 
-
-export const socket = io(
-  SOCKET_URL,
-  {
-    autoConnect: false
-  }
-);
-
-
-export function connectToServer(
-  roomId,
-  userName
-) {
-
+export function connectToServer(roomId, userName) {
   if (!socket.connected) {
-
     socket.connect();
-
   }
 
-
-  socket.emit(
-    "join-room",
-    {
-      roomId,
-      userName
-    }
-  );
-
+  socket.emit("join-room", {
+    roomId,
+    userName,
+  });
 }
 
-
-export function leaveRoom(
-  roomId
-) {
-
+export function leaveRoom(roomId) {
   if (!socket.connected) {
     return;
   }
 
-
-  socket.emit(
-    "leave-room",
-    {
-      roomId
-    }
-  );
-
+  socket.emit("leave-room", {
+    roomId,
+  });
 }

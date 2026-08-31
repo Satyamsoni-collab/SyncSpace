@@ -2,66 +2,58 @@ import React, {
   createContext,
   useContext,
   useEffect,
-  useState
+  useState,
 } from "react";
 
 import { io } from "socket.io-client";
 
-const SOCKET_URL =
-  "http://localhost:5000";
+// Backend Socket.IO server
+const SOCKET_URL = "http://localhost:5001";
 
-const SocketContext =
-  createContext(null);
+// Create socket context
+const SocketContext = createContext(null);
 
-
+// Custom hook to access socket
 export function useSocket() {
-
-  return useContext(
-    SocketContext
-  );
-
+  return useContext(SocketContext);
 }
 
-
-export function SocketProvider({
-  children
-}) {
-
-  const [socket, setSocket] =
-    useState(null);
-
+// Socket provider
+export function SocketProvider({ children }) {
+  const [socket, setSocket] = useState(null);
 
   useEffect(() => {
+    // Connect to backend
+    const newSocket = io(SOCKET_URL, {
+      autoConnect: true,
+    });
 
-    const newSocket = io(
-      SOCKET_URL,
-      {
-        autoConnect: true
-      }
-    );
-
+    // Save socket instance
     setSocket(newSocket);
 
+    // Connection status
+    newSocket.on("connect", () => {
+      console.log("Socket connected:", newSocket.id);
+    });
 
+    newSocket.on("disconnect", () => {
+      console.log("Socket disconnected");
+    });
+
+    newSocket.on("connect_error", (error) => {
+      console.error("Socket connection error:", error.message);
+    });
+
+    // Cleanup when component unmounts
     return () => {
-
+      newSocket.removeAllListeners();
       newSocket.disconnect();
-
     };
-
   }, []);
 
-
   return (
-
-    <SocketContext.Provider
-      value={socket}
-    >
-
+    <SocketContext.Provider value={socket}>
       {children}
-
     </SocketContext.Provider>
-
   );
-
 }
