@@ -1,3 +1,5 @@
+import React from "react";
+
 function Toolbar({
   tool,
   setTool,
@@ -5,18 +7,20 @@ function Toolbar({
   setColor,
   clearCanvas,
   undoCanvas,
+  canUndo,
   connectedUsers,
   connected
 }) {
 
   return (
-
     <div className="toolbar">
 
-
+      {/* LEFT - DRAWING TOOLS */}
       <div className="toolbar-left">
 
+        {/* PEN */}
         <button
+          type="button"
           className={
             tool === "pen"
               ? "active"
@@ -31,7 +35,9 @@ function Toolbar({
         </button>
 
 
+        {/* RECTANGLE */}
         <button
+          type="button"
           className={
             tool === "rectangle"
               ? "active"
@@ -46,7 +52,9 @@ function Toolbar({
         </button>
 
 
+        {/* CIRCLE */}
         <button
+          type="button"
           className={
             tool === "circle"
               ? "active"
@@ -61,7 +69,9 @@ function Toolbar({
         </button>
 
 
+        {/* TEXT */}
         <button
+          type="button"
           className={
             tool === "text"
               ? "active"
@@ -78,7 +88,7 @@ function Toolbar({
       </div>
 
 
-
+      {/* CENTER - COLOR */}
       <div className="toolbar-center">
 
         <label className="color-picker">
@@ -100,26 +110,39 @@ function Toolbar({
       </div>
 
 
-
+      {/* RIGHT - ACTIONS */}
       <div className="toolbar-right">
 
-
+        {/* UNDO */}
         <button
+          type="button"
           className="action-button"
           onClick={undoCanvas}
+          disabled={!canUndo}
+          title={
+            canUndo
+              ? "Undo last action"
+              : "Nothing to undo"
+          }
         >
           ↩ Undo
         </button>
 
 
+        {/* CLEAR */}
         <button
+          type="button"
           className="clear-button"
           onClick={clearCanvas}
+          disabled={
+            typeof clearCanvas !== "function"
+          }
         >
           🗑 Clear
         </button>
 
 
+        {/* CONNECTION STATUS */}
         <div className="connection-status">
 
           <span
@@ -137,20 +160,17 @@ function Toolbar({
         </div>
 
 
+        {/* USER COUNT */}
         <div className="user-count">
 
           👥 {connectedUsers}
 
         </div>
 
-
       </div>
 
-
     </div>
-
   );
-
 }
 
 

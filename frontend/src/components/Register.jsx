@@ -1,228 +1,466 @@
 import React, { useState } from "react";
+import "./Register.css";
 
 function Register({ onSwitchToLogin }) {
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
 
-  const [name, setName] =
-    useState("");
+  const [message, setMessage] = useState("");
+  const [messageType, setMessageType] = useState("");
 
-  const [email, setEmail] =
-    useState("");
+  const [loading, setLoading] = useState(false);
 
-  const [password, setPassword] =
-    useState("");
+  const handleSubmit = async (event) => {
+    event.preventDefault();
 
-  const [message, setMessage] =
-    useState("");
+    setMessage("");
+    setMessageType("");
 
-  const [loading, setLoading] =
-    useState(false);
+    if (!name.trim() || !email.trim() || !password.trim()) {
+      setMessage("Please fill in all fields.");
+      setMessageType("error");
+      return;
+    }
 
+    if (password.length < 6) {
+      setMessage("Password must contain at least 6 characters.");
+      setMessageType("error");
+      return;
+    }
 
-  const handleSubmit =
-    async (event) => {
+    setLoading(true);
 
-      event.preventDefault();
+    try {
+      const response = await fetch(
+        "http://localhost:5000/api/auth/register",
+        {
+          method: "POST",
 
-      setMessage("");
-      setLoading(true);
+          headers: {
+            "Content-Type": "application/json"
+          },
 
-
-      try {
-
-        const response =
-          await fetch(
-            "http://localhost:5000/api/auth/register",
-            {
-              method: "POST",
-
-              headers: {
-                "Content-Type":
-                  "application/json"
-              },
-
-              body: JSON.stringify({
-                name,
-                email,
-                password
-              })
-            }
-          );
-
-
-        const data =
-          await response.json();
-
-
-        if (!response.ok) {
-
-          setMessage(
-            data.message ||
-            "Registration failed"
-          );
-
-          setLoading(false);
-
-          return;
-
+          body: JSON.stringify({
+            name: name.trim(),
+            email: email.trim(),
+            password
+          })
         }
+      );
 
+      const data = await response.json();
 
+      if (!response.ok) {
+        setMessage(
+          data.message || "Registration failed. Please try again."
+        );
+
+        setMessageType("error");
+        setLoading(false);
+
+        return;
+      }
+
+      if (data.token) {
         localStorage.setItem(
           "syncspaceToken",
           data.token
         );
-
-
-        localStorage.setItem(
-          "syncspaceUser",
-          JSON.stringify({
-            name,
-            email
-          })
-        );
-
-
-        setMessage(
-          "Registration successful!"
-        );
-
-
-        setTimeout(() => {
-
-          onSwitchToLogin();
-
-        }, 1000);
-
-
-      } catch (error) {
-
-        setMessage(
-          "Unable to connect to server"
-        );
-
       }
 
+      localStorage.setItem(
+        "syncspaceUser",
+        JSON.stringify({
+          name: name.trim(),
+          email: email.trim()
+        })
+      );
 
+      setMessage(
+        "Account created successfully!"
+      );
+
+      setMessageType("success");
+
+      setTimeout(() => {
+        onSwitchToLogin();
+      }, 1200);
+
+    } catch (error) {
+      console.error(
+        "Registration error:",
+        error
+      );
+
+      setMessage(
+        "Unable to connect to SyncSpace server."
+      );
+
+      setMessageType("error");
+
+    } finally {
       setLoading(false);
-
-    };
-
+    }
+  };
 
   return (
+    <div className="register-page">
 
-    <div className="auth-container">
+      {/* Background decoration */}
 
-      <div className="auth-card">
+      <div className="register-glow register-glow-one"></div>
 
-        <h1>
-          Create Account
-        </h1>
+      <div className="register-glow register-glow-two"></div>
 
-        <p>
-          Join SyncSpace and start collaborating.
-        </p>
+      <div className="register-grid"></div>
 
 
-        <form
-          onSubmit={handleSubmit}
+      {/* Navigation */}
+
+      <nav className="register-nav">
+
+        <div
+          className="register-brand"
+          onClick={onSwitchToLogin}
         >
 
-          <input
-            type="text"
-            placeholder="Full Name"
-            value={name}
-            onChange={(event) =>
-              setName(
-                event.target.value
-              )
-            }
-            required
-          />
+          <div className="register-brand-icon">
+            S
+          </div>
+
+          <div>
+            <h2>SyncSpace</h2>
+
+            <span>
+              Real-time collaborative workspace
+            </span>
+          </div>
+
+        </div>
 
 
-          <input
-            type="email"
-            placeholder="Email Address"
-            value={email}
-            onChange={(event) =>
-              setEmail(
-                event.target.value
-              )
-            }
-            required
-          />
+        <div className="register-nav-status">
+
+          <span className="register-live-dot"></span>
+
+          Live Collaboration
+
+        </div>
+
+      </nav>
 
 
-          <input
-            type="password"
-            placeholder="Password"
-            value={password}
-            onChange={(event) =>
-              setPassword(
-                event.target.value
-              )
-            }
-            required
-          />
+      {/* Main */}
+
+      <main className="register-main">
+
+        {/* Left section */}
+
+        <section className="register-intro">
+
+          <div className="register-badge">
+            ✦ COLLABORATE • CREATE • CONNECT
+          </div>
+
+          <h1>
+            Build together.
+            <span>
+              In real time.
+            </span>
+          </h1>
+
+          <p className="register-description">
+            Create your SyncSpace account and work
+            together with your team using a shared
+            whiteboard and collaborative code editor.
+          </p>
 
 
-          <button
-            type="submit"
-            disabled={loading}
-          >
+          <div className="register-features">
 
-            {
-              loading
-                ? "Creating Account..."
-                : "Create Account"
-            }
+            <div className="register-feature">
 
-          </button>
+              <div className="register-feature-icon">
+                🎨
+              </div>
 
+              <div>
+                <h3>
+                  Collaborative Whiteboard
+                </h3>
 
-        </form>
+                <p>
+                  Draw, brainstorm and share ideas together.
+                </p>
+              </div>
 
-
-        {
-          message && (
-
-            <p className="auth-message">
-
-              {message}
-
-            </p>
-
-          )
-        }
+            </div>
 
 
-        <p>
+            <div className="register-feature">
 
-          Already have an account?
+              <div className="register-feature-icon">
+                💻
+              </div>
 
-          {" "}
+              <div>
+                <h3>
+                  Real-time Code Editor
+                </h3>
 
-          <button
-            type="button"
-            onClick={
-              onSwitchToLogin
-            }
-          >
+                <p>
+                  Write and edit code with your teammates.
+                </p>
+              </div>
 
-            Login
-
-          </button>
-
-        </p>
+            </div>
 
 
-      </div>
+            <div className="register-feature">
+
+              <div className="register-feature-icon">
+                ⚡
+              </div>
+
+              <div>
+                <h3>
+                  Instant Synchronization
+                </h3>
+
+                <p>
+                  Changes are synchronized instantly.
+                </p>
+              </div>
+
+            </div>
+
+          </div>
+
+        </section>
+
+
+        {/* Register Card */}
+
+        <section className="register-card-wrapper">
+
+          <div className="register-card">
+
+            <div className="register-card-glow"></div>
+
+
+            <div className="register-card-header">
+
+              <div className="register-icon">
+                S
+              </div>
+
+              <h2>
+                Create Account
+              </h2>
+
+              <p>
+                Join SyncSpace and start collaborating.
+              </p>
+
+            </div>
+
+
+            <form
+              className="register-form"
+              onSubmit={handleSubmit}
+            >
+
+              {/* Name */}
+
+              <div className="register-input-group">
+
+                <label>
+                  Full Name
+                </label>
+
+                <div className="register-input-wrapper">
+
+                  <span>
+                    👤
+                  </span>
+
+                  <input
+                    type="text"
+                    placeholder="Enter your full name"
+                    value={name}
+                    onChange={(event) =>
+                      setName(event.target.value)
+                    }
+                    autoComplete="name"
+                    disabled={loading}
+                    required
+                  />
+
+                </div>
+
+              </div>
+
+
+              {/* Email */}
+
+              <div className="register-input-group">
+
+                <label>
+                  Email Address
+                </label>
+
+                <div className="register-input-wrapper">
+
+                  <span>
+                    ✉️
+                  </span>
+
+                  <input
+                    type="email"
+                    placeholder="Enter your email"
+                    value={email}
+                    onChange={(event) =>
+                      setEmail(event.target.value)
+                    }
+                    autoComplete="email"
+                    disabled={loading}
+                    required
+                  />
+
+                </div>
+
+              </div>
+
+
+              {/* Password */}
+
+              <div className="register-input-group">
+
+                <label>
+                  Password
+                </label>
+
+                <div className="register-input-wrapper">
+
+                  <span>
+                    🔒
+                  </span>
+
+                  <input
+                    type="password"
+                    placeholder="Create a password"
+                    value={password}
+                    onChange={(event) =>
+                      setPassword(event.target.value)
+                    }
+                    autoComplete="new-password"
+                    disabled={loading}
+                    required
+                  />
+
+                </div>
+
+                <small>
+                  Minimum 6 characters
+                </small>
+
+              </div>
+
+
+              {/* Message */}
+
+              {message && (
+
+                <div
+                  className={`register-message ${messageType}`}
+                >
+                  {message}
+                </div>
+
+              )}
+
+
+              {/* Submit */}
+
+              <button
+                className="register-submit-button"
+                type="submit"
+                disabled={loading}
+              >
+
+                {loading ? (
+                  <>
+                    <span className="register-spinner"></span>
+                    Creating Account...
+                  </>
+                ) : (
+                  <>
+                    Create Account
+                    <span className="register-arrow">
+                      →
+                    </span>
+                  </>
+                )}
+
+              </button>
+
+            </form>
+
+
+            {/* Login */}
+
+            <div className="register-login-section">
+
+              <span>
+                Already have an account?
+              </span>
+
+              <button
+                type="button"
+                onClick={onSwitchToLogin}
+              >
+                Login
+              </button>
+
+            </div>
+
+
+            {/* Security */}
+
+            <div className="register-secure">
+
+              <span className="secure-check">
+                ✓
+              </span>
+
+              Your information is securely stored
+
+            </div>
+
+          </div>
+
+        </section>
+
+      </main>
+
+
+      {/* Footer */}
+
+      <footer className="register-footer">
+
+        <span>
+          SyncSpace © 2026
+        </span>
+
+        <span>
+          Real-time collaboration platform
+        </span>
+
+      </footer>
 
     </div>
-
   );
-
 }
-
 
 export default Register;
