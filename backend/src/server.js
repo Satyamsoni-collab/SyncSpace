@@ -135,10 +135,8 @@ app.get(
   GET WORKSPACE EVENTS
 
   Main route:
-  /api/workspace/:roomId/events
 
-  Example:
-  http://localhost:5000/api/workspace/102/events
+  /api/workspace/:roomId/events
 */
 
 app.get(
@@ -200,13 +198,11 @@ app.get(
 
 
 /*
-  ALTERNATIVE ROUTE
+  ALTERNATIVE EVENT ROUTE
 
-  This is added so your old ReplayPanel
-  URL can also work if needed.
+  Supports old ReplayPanel URL:
 
-  Example:
-  /api/workspace-events/102
+  /api/workspace-events/:roomId
 */
 
 app.get(
@@ -356,56 +352,87 @@ io.on(
           /*
             GET OR CREATE WORKSPACE
 
-            upsert prevents duplicate room
-            creation errors.
+            upsert prevents duplicate
+            workspace creation.
           */
 
-          const workspace =
-            await Workspace.findOneAndUpdate(
+          let workspace;
 
-              {
-                roomId
-              },
+          try {
 
-              {
-                $setOnInsert: {
+            workspace =
+              await Workspace.findOneAndUpdate(
 
-                  roomId,
+                {
+                  roomId
+                },
 
-                  whiteboardData:
-                    [],
+                {
+                  $setOnInsert: {
 
-                  code:
-                    defaultCode,
+                    roomId,
 
-                  language:
-                    "javascript"
+                    whiteboardData:
+                      [],
+
+                    code:
+                      defaultCode,
+
+                    language:
+                      "javascript"
+
+                  }
+
+                },
+
+                {
+
+                  new:
+                    true,
+
+                  upsert:
+                    true,
+
+                  setDefaultsOnInsert:
+                    true
 
                 }
 
-              },
+              );
 
-              {
+          } catch (databaseError) {
 
-                new:
-                  true,
+            /*
+              Handle rare duplicate-key
+              race condition.
+            */
 
-                upsert:
-                  true,
+            if (
+              databaseError.code === 11000
+            ) {
 
-                setDefaultsOnInsert:
-                  true
+              workspace =
+                await Workspace.findOne({
+                  roomId
+                });
 
-              }
+            } else {
 
-            );
+              throw databaseError;
+
+            }
+
+          }
 
 
           /*
             SEND SAVED WORKSPACE STATE
 
-            This restores the whiteboard,
-            code and selected language.
+            Restores:
+
+            - Whiteboard
+            - Code
+            - Language
           */
 
           socket.emit(
@@ -414,13 +441,15 @@ io.on(
             {
 
               whiteboardData:
-                workspace.whiteboardData || [],
+                workspace?.whiteboardData || [],
 
               code:
-                workspace.code || defaultCode,
+                workspace?.code ||
+                defaultCode,
 
               language:
-                workspace.language || "javascript"
+                workspace?.language ||
+                "javascript"
 
             }
 
@@ -429,6 +458,8 @@ io.on(
 
           /*
             SEND EDITOR STATE
+
+            Supports CodeEditor.
           */
 
           socket.emit(
@@ -437,10 +468,12 @@ io.on(
             {
 
               code:
-                workspace.code || defaultCode,
+                workspace?.code ||
+                defaultCode,
 
               language:
-                workspace.language || "javascript"
+                workspace?.language ||
+                "javascript"
 
             }
 
@@ -448,7 +481,7 @@ io.on(
 
 
           /*
-            GET USER COUNT
+            GET CURRENT USER COUNT
           */
 
           const roomSockets =
@@ -601,7 +634,7 @@ io.on(
 
 
           /*
-            SAVE DRAWING IN DATABASE
+            SAVE DRAWING TO DATABASE
           */
 
           await Workspace.findOneAndUpdate(
@@ -645,7 +678,8 @@ io.on(
               roomId,
 
               userName:
-                socket.data.userName || "Guest",
+                socket.data.userName ||
+                "Guest",
 
               eventType:
                 "whiteboard-draw",
@@ -656,7 +690,8 @@ io.on(
                   shape.id || null,
 
                 type:
-                  shape.type || "drawing"
+                  shape.type ||
+                  "drawing"
 
               }
 
@@ -675,6 +710,159 @@ io.on(
 
           console.error(
             "Whiteboard draw error:",
+            error
+          );
+
+        }
+
+      }
+    );
+
+
+    /*
+      WHITEBOARD COMPLETE STATE
+
+      Used by Undo.
+
+      The frontend sends the complete
+      board after removing the last shape.
+
+      This updates:
+
+      1. MongoDB
+      2. Other connected users
+    */
+
+    socket.on(
+      "whiteboard-state",
+
+      async ({
+        roomId,
+        shapes
+      }) => {
+
+        try {
+
+          if (!roomId) {
+
+            return;
+
+          }
+
+
+          if (
+            !Array.isArray(shapes)
+          ) {
+
+            return;
+
+          }
+
+
+          roomId =
+            String(roomId)
+              .trim();
+
+
+          /*
+            SAVE COMPLETE WHITEBOARD
+            TO MONGODB
+          */
+
+          await Workspace.findOneAndUpdate(
+
+            {
+              roomId
+            },
+
+            {
+
+              $set: {
+
+                whiteboardData:
+                  shapes
+
+              }
+
+            },
+
+            {
+
+              new:
+                true,
+
+              upsert:
+                true
+
+            }
+
+          );
+
+
+          /*
+            SEND COMPLETE BOARD TO
+            OTHER USERS
+          */
+
+          socket.to(roomId).emit(
+            "whiteboard-state",
+
+            {
+
+              shapes
+
+            }
+
+          );
+
+
+          /*
+            SAVE UNDO EVENT
+          */
+
+          try {
+
+            await WorkspaceEvent.create({
+
+              roomId,
+
+              userName:
+                socket.data.userName ||
+                "Guest",
+
+              eventType:
+                "whiteboard-draw",
+
+              data: {
+
+                action:
+                  "undo",
+
+                shapeCount:
+                  shapes.length
+
+              }
+
+            });
+
+          } catch (eventError) {
+
+            console.error(
+              "Whiteboard state event save error:",
+              eventError
+            );
+
+          }
+
+
+          console.log(
+            `${socket.data.userName || "Guest"} updated whiteboard state in room ${roomId}`
+          );
+
+        } catch (error) {
+
+          console.error(
+            "Whiteboard state error:",
             error
           );
 
@@ -763,7 +951,8 @@ io.on(
               roomId,
 
               userName:
-                socket.data.userName || "Guest",
+                socket.data.userName ||
+                "Guest",
 
               eventType:
                 "whiteboard-clear",
@@ -824,13 +1013,15 @@ io.on(
               socket.id,
 
             name:
-              socket.data.userName || "Guest",
+              socket.data.userName ||
+              "Guest",
 
             x,
 
             y
 
           }
+
         );
 
       }
@@ -882,7 +1073,8 @@ io.on(
                   code || "",
 
                 language:
-                  language || "javascript"
+                  language ||
+                  "javascript"
 
               }
 
@@ -902,7 +1094,7 @@ io.on(
 
 
           /*
-            SEND TO OTHER USERS
+            SEND CODE TO OTHER USERS
           */
 
           socket.to(roomId).emit(
@@ -930,7 +1122,8 @@ io.on(
               roomId,
 
               userName:
-                socket.data.userName || "Guest",
+                socket.data.userName ||
+                "Guest",
 
               eventType:
                 "code-change",
@@ -938,7 +1131,8 @@ io.on(
               data: {
 
                 language:
-                  language || "javascript"
+                  language ||
+                  "javascript"
 
               }
 
@@ -1004,6 +1198,7 @@ io.on(
                 socket.id
 
             }
+
           );
 
 
@@ -1053,7 +1248,8 @@ io.on(
               roomId,
 
               userName:
-                socket.data.userName || "Guest",
+                socket.data.userName ||
+                "Guest",
 
               eventType:
                 "leave",
@@ -1134,14 +1330,13 @@ io.on(
                 socket.id
 
             }
+
           );
 
 
           /*
-            UPDATE USER COUNT
-
-            Socket.IO automatically removes
-            the socket from the room.
+            SOCKET.IO AUTOMATICALLY
+            REMOVES DISCONNECTED SOCKET
           */
 
           setTimeout(() => {
@@ -1177,7 +1372,8 @@ io.on(
               roomId,
 
               userName:
-                socket.data.userName || "Guest",
+                socket.data.userName ||
+                "Guest",
 
               eventType:
                 "leave",

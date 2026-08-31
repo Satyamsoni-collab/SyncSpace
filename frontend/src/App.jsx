@@ -20,41 +20,31 @@ import {
 
 function App() {
 
-
   const [page, setPage] =
     useState("login");
-
 
   const [user, setUser] =
     useState(null);
 
-
   const [workspace, setWorkspace] =
     useState(null);
-
-
-  /*
-    REPLAY PANEL STATE
-  */
 
   const [showReplay, setShowReplay] =
     useState(false);
 
 
-
   /*
-    CHECK LOGIN DATA
-    WHEN PAGE REFRESHES
+    =========================
+    RESTORE LOGIN SESSION
+    =========================
   */
 
   useEffect(() => {
-
 
     const savedToken =
       localStorage.getItem(
         "syncspaceToken"
       );
-
 
     const savedUser =
       localStorage.getItem(
@@ -67,9 +57,7 @@ function App() {
       savedUser
     ) {
 
-
       try {
-
 
         const parsedUser =
           JSON.parse(
@@ -81,14 +69,11 @@ function App() {
           parsedUser
         );
 
-
         setPage(
           "join-room"
         );
 
-
       } catch (error) {
-
 
         console.error(
           "Failed to restore user session:",
@@ -100,61 +85,52 @@ function App() {
           "syncspaceToken"
         );
 
-
         localStorage.removeItem(
           "syncspaceUser"
         );
 
 
-        setUser(
-          null
-        );
-
+        setUser(null);
 
         setPage(
           "login"
         );
 
-
       }
 
-
     }
-
 
   }, []);
 
 
-
   /*
+    =========================
     LOGIN SUCCESS
+    =========================
   */
 
   const handleLoginSuccess =
     (loggedInUser) => {
 
-
       setUser(
         loggedInUser
       );
-
 
       setPage(
         "join-room"
       );
 
-
     };
 
 
-
   /*
+    =========================
     JOIN ROOM
+    =========================
   */
 
   const handleJoinRoom =
     (userName, roomId) => {
-
 
       setWorkspace({
         userName,
@@ -171,18 +147,17 @@ function App() {
         "workspace"
       );
 
-
     };
 
 
-
   /*
+    =========================
     LEAVE ROOM
+    =========================
   */
 
   const handleLeaveRoom =
     () => {
-
 
       const confirmLeave =
         window.confirm(
@@ -191,74 +166,51 @@ function App() {
 
 
       if (!confirmLeave) {
-
         return;
-
       }
 
-
-      /*
-        NOTIFY SOCKET SERVER
-      */
 
       if (
         workspace?.roomId &&
         socket.connected
       ) {
 
-
         socket.emit(
           "leave-room",
           {
-
             roomId:
               workspace.roomId
-
           }
         );
 
-
       }
 
-
-      /*
-        CLOSE REPLAY PANEL
-      */
 
       setShowReplay(
         false
       );
 
 
-      /*
-        CLEAR CURRENT WORKSPACE
-      */
-
       setWorkspace(
         null
       );
 
 
-      /*
-        RETURN TO JOIN ROOM PAGE
-      */
-
       setPage(
         "join-room"
       );
 
-
     };
 
 
-
   /*
+    =========================
     LOGOUT
+    =========================
   */
 
   const handleLogout =
     () => {
-
 
       const confirmLogout =
         window.confirm(
@@ -267,94 +219,59 @@ function App() {
 
 
       if (!confirmLogout) {
-
         return;
-
       }
 
-
-      /*
-        LEAVE ROOM FIRST
-      */
 
       if (
         workspace?.roomId &&
         socket.connected
       ) {
 
-
         socket.emit(
           "leave-room",
           {
-
             roomId:
               workspace.roomId
-
           }
         );
-
 
       }
 
 
-      /*
-        REMOVE LOGIN DATA
-      */
-
       localStorage.removeItem(
         "syncspaceToken"
       );
-
 
       localStorage.removeItem(
         "syncspaceUser"
       );
 
 
-      /*
-        CLEAR STATE
-      */
+      setUser(null);
 
-      setUser(
-        null
-      );
+      setWorkspace(null);
 
-
-      setWorkspace(
-        null
-      );
-
-
-      setShowReplay(
-        false
-      );
-
-
-      /*
-        RETURN TO LOGIN
-      */
+      setShowReplay(false);
 
       setPage(
         "login"
       );
 
-
     };
 
 
-
   /*
+    =========================
     SHARE ROOM
+    =========================
   */
 
   const handleShare =
     async () => {
 
-
       if (!workspace) {
-
         return;
-
       }
 
 
@@ -366,7 +283,6 @@ Room ID: ${workspace.roomId}`;
 
       try {
 
-
         await navigator.clipboard.writeText(
           shareText
         );
@@ -376,28 +292,26 @@ Room ID: ${workspace.roomId}`;
           "Room details copied to clipboard!"
         );
 
-
       } catch (error) {
-
 
         alert(
           `Room ID: ${workspace.roomId}`
         );
 
-
       }
-
 
     };
 
 
-
   /*
+    =========================
     LOGIN PAGE
+    =========================
   */
 
-  if (page === "login") {
-
+  if (
+    page === "login"
+  ) {
 
     return (
 
@@ -415,17 +329,18 @@ Room ID: ${workspace.roomId}`;
 
     );
 
-
   }
 
 
-
   /*
+    =========================
     REGISTER PAGE
+    =========================
   */
 
-  if (page === "register") {
-
+  if (
+    page === "register"
+  ) {
 
     return (
 
@@ -439,17 +354,18 @@ Room ID: ${workspace.roomId}`;
 
     );
 
-
   }
 
 
-
   /*
+    =========================
     JOIN ROOM PAGE
+    =========================
   */
 
-  if (page === "join-room") {
-
+  if (
+    page === "join-room"
+  ) {
 
     return (
 
@@ -467,13 +383,13 @@ Room ID: ${workspace.roomId}`;
 
     );
 
-
   }
 
 
-
   /*
+    =========================
     MAIN WORKSPACE
+    =========================
   */
 
   return (
@@ -481,26 +397,29 @@ Room ID: ${workspace.roomId}`;
     <div className="app-shell">
 
 
-      {/* Background Effects */}
+      {/* =========================
+          BACKGROUND EFFECTS
+      ========================= */}
 
       <div
         className="background-glow glow-one"
       ></div>
-
 
       <div
         className="background-glow glow-two"
       ></div>
 
 
-
-      {/* HEADER */}
+      {/* =========================
+          TOP NAVIGATION
+      ========================= */}
 
       <header className="top-nav">
 
 
-        <div className="brand-section">
+        {/* BRAND */}
 
+        <div className="brand-section">
 
           <div className="brand-icon">
 
@@ -523,13 +442,12 @@ Room ID: ${workspace.roomId}`;
 
           </div>
 
-
         </div>
 
 
+        {/* ROOM STATUS */}
 
         <div className="room-status">
-
 
           <div
             className="live-dot"
@@ -549,15 +467,15 @@ Room ID: ${workspace.roomId}`;
 
           </span>
 
-
         </div>
 
 
+        {/* NAV ACTIONS */}
 
         <div className="nav-actions">
 
 
-          {/* SHARE ROOM */}
+          {/* SHARE */}
 
           <button
             className="header-button secondary"
@@ -571,27 +489,23 @@ Room ID: ${workspace.roomId}`;
           </button>
 
 
-
-          {/* HISTORY BUTTON */}
+          {/* HISTORY */}
 
           <button
             className="header-button secondary"
             onClick={() =>
               setShowReplay(
-                !showReplay
+                true
               )
             }
           >
 
-            {showReplay
-              ? "✕ Close History"
-              : "📜 History"}
+            📜 History
 
           </button>
 
 
-
-          {/* LEAVE ROOM */}
+          {/* LEAVE */}
 
           <button
             className="header-button leave"
@@ -603,7 +517,6 @@ Room ID: ${workspace.roomId}`;
             Leave
 
           </button>
-
 
 
           {/* LOGOUT */}
@@ -622,79 +535,59 @@ Room ID: ${workspace.roomId}`;
 
         </div>
 
-
       </header>
 
 
+      {/* ==================================================
+          REPLAY / HISTORY POPUP
 
-      {/* =========================
-          REPLAY HISTORY POPUP
-      ========================= */}
+          IMPORTANT:
+          There is NO extra Workspace History header here.
+
+          ReplayPanel.jsx already contains its own header.
+      ================================================== */}
 
       {showReplay && (
 
-        <div className="replay-overlay">
+        <div
+          className="replay-overlay"
+        >
+
+          <div
+            className="replay-overlay-card"
+          >
 
 
-          <div className="replay-popup">
+            {/* CLOSE BUTTON */}
+
+            <button
+              className="replay-close-button"
+              onClick={() =>
+                setShowReplay(false)
+              }
+              aria-label="Close workspace history"
+              title="Close history"
+            >
+
+              ✕
+
+            </button>
 
 
-            <div className="replay-popup-header">
-
-
-              <div>
-
-
-                <h2>
-                  📜 Workspace History
-                </h2>
-
-
-                <p>
-
-                  Room:
-                  {" "}
-                  {workspace?.roomId}
-
-                </p>
-
-
-              </div>
-
-
-
-              <button
-                className="replay-close-button"
-                onClick={() =>
-                  setShowReplay(false)
-                }
-              >
-
-                ✕ Close
-
-              </button>
-
-
-            </div>
-
-
+            {/* REPLAY PANEL */}
 
             <ReplayPanel
-
               roomId={
                 workspace?.roomId
               }
-
             />
 
 
           </div>
 
-
         </div>
 
       )}
-
 
 
       {/* =========================
@@ -704,20 +597,28 @@ Room ID: ${workspace.roomId}`;
       <main className="workspace">
 
 
-        {/* WHITEBOARD */}
+        {/* =========================
+            WHITEBOARD
+        ========================= */}
 
         <section
           className="workspace-panel whiteboard-panel"
         >
 
 
-          <div className="panel-header">
+          <div
+            className="panel-header"
+          >
 
 
-            <div className="panel-title-group">
+            <div
+              className="panel-title-group"
+            >
 
 
-              <div className="panel-icon purple">
+              <div
+                className="panel-icon purple"
+              >
 
                 🎨
 
@@ -740,17 +641,15 @@ Room ID: ${workspace.roomId}`;
             </div>
 
 
-
-            <div className="panel-live">
-
+            <div
+              className="panel-live"
+            >
 
               <span
                 className="pulse-dot"
               ></span>
 
-
               LIVE
-
 
             </div>
 
@@ -758,9 +657,9 @@ Room ID: ${workspace.roomId}`;
           </div>
 
 
-
-          <div className="panel-content">
-
+          <div
+            className="panel-content"
+          >
 
             <Whiteboard
 
@@ -774,25 +673,28 @@ Room ID: ${workspace.roomId}`;
 
             />
 
-
           </div>
 
 
         </section>
 
 
+        {/* =========================
+            DIVIDER
+        ========================= */}
 
-        {/* DIVIDER */}
-
-        <div className="workspace-divider">
-
+        <div
+          className="workspace-divider"
+        >
 
           <div
             className="divider-line"
           ></div>
 
 
-          <div className="divider-circle">
+          <div
+            className="divider-circle"
+          >
 
             ↔
 
@@ -803,25 +705,31 @@ Room ID: ${workspace.roomId}`;
             className="divider-line"
           ></div>
 
-
         </div>
 
 
-
-        {/* CODE EDITOR */}
+        {/* =========================
+            CODE EDITOR
+        ========================= */}
 
         <section
           className="workspace-panel editor-panel"
         >
 
 
-          <div className="panel-header">
+          <div
+            className="panel-header"
+          >
 
 
-            <div className="panel-title-group">
+            <div
+              className="panel-title-group"
+            >
 
 
-              <div className="panel-icon blue">
+              <div
+                className="panel-icon blue"
+              >
 
                 💻
 
@@ -844,17 +752,15 @@ Room ID: ${workspace.roomId}`;
             </div>
 
 
-
-            <div className="panel-live">
-
+            <div
+              className="panel-live"
+            >
 
               <span
                 className="pulse-dot"
               ></span>
 
-
               CONNECTED
-
 
             </div>
 
@@ -862,9 +768,9 @@ Room ID: ${workspace.roomId}`;
           </div>
 
 
-
-          <div className="panel-content">
-
+          <div
+            className="panel-content"
+          >
 
             <CodeEditor
 
@@ -878,7 +784,6 @@ Room ID: ${workspace.roomId}`;
 
             />
 
-
           </div>
 
 
@@ -888,14 +793,18 @@ Room ID: ${workspace.roomId}`;
       </main>
 
 
+      {/* =========================
+          FOOTER
+      ========================= */}
 
-      {/* FOOTER */}
+      <footer
+        className="status-bar"
+      >
 
-      <footer className="status-bar">
 
-
-        <div className="status-left">
-
+        <div
+          className="status-left"
+        >
 
           <span
             className="status-online-dot"
@@ -912,20 +821,21 @@ Room ID: ${workspace.roomId}`;
 
           </strong>
 
-
         </div>
 
 
-
-        <div className="status-center">
+        <div
+          className="status-center"
+        >
 
           ⚡ Changes sync instantly across connected users
 
         </div>
 
 
-
-        <div className="status-right">
+        <div
+          className="status-right"
+        >
 
           SyncSpace © 2026
 
@@ -938,7 +848,6 @@ Room ID: ${workspace.roomId}`;
     </div>
 
   );
-
 
 }
 
