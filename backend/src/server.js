@@ -129,6 +129,32 @@ app.get(
 
   }
 );
+/*
+  SERVER API HEALTH CHECK
+*/
+
+app.get(
+  "/api/health",
+
+  (req, res) => {
+
+    res.status(200).json({
+
+      success: true,
+
+      status: "ok",
+
+      service: "SyncSpace Backend",
+
+      database: "connected",
+
+      timestamp: new Date().toISOString()
+
+    });
+
+  }
+);
+
 
 
 /*
