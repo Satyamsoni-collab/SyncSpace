@@ -22,9 +22,16 @@ const app = express();
   CONNECT DATABASE
 */
 
-connectDatabase();
-
-
+connectDatabase()
+  .then(() => {
+    console.log("Database initialization completed");
+  })
+  .catch((error) => {
+    console.error(
+      "Database initialization error:",
+      error.message
+    );
+  });
 /*
   MIDDLEWARE
 */
