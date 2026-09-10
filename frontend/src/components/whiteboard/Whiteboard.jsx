@@ -21,6 +21,8 @@ import {
   connectToServer
 } from "../../services/socket";
 
+import { sharedState } from "../../yjs/yjsClient";
+
 import "./whiteboard.css";
 
 
@@ -98,6 +100,48 @@ function Whiteboard({
 
   const [connected, setConnected] =
     useState(false);
+
+
+  /*
+    YJS STATE SYNCHRONIZATION
+  */
+
+  useEffect(() => {
+
+    const loadShapesFromYjs = () => {
+
+      const savedShapes =
+        sharedState.get("shapes");
+
+      if (Array.isArray(savedShapes)) {
+        setShapes(savedShapes);
+      }
+
+    };
+
+
+    loadShapesFromYjs();
+
+
+    const handleYjsChange = () => {
+      loadShapesFromYjs();
+    };
+
+
+    sharedState.observe(
+      handleYjsChange
+    );
+
+
+    return () => {
+
+      sharedState.unobserve(
+        handleYjsChange
+      );
+
+    };
+
+  }, []);
 
 
 
@@ -215,6 +259,12 @@ function Whiteboard({
         ) {
 
           setShapes(
+            savedShapes
+          );
+
+
+          sharedState.set(
+            "shapes",
             savedShapes
           );
 
@@ -412,10 +462,19 @@ function Whiteboard({
             }
 
 
-            return [
+            const updatedShapes = [
               ...previousShapes,
               shape
             ];
+
+
+            sharedState.set(
+              "shapes",
+              updatedShapes
+            );
+
+
+            return updatedShapes;
 
           }
         );
@@ -446,6 +505,12 @@ function Whiteboard({
           updatedShapes
         );
 
+
+        sharedState.set(
+          "shapes",
+          updatedShapes
+        );
+
       };
 
 
@@ -468,6 +533,12 @@ function Whiteboard({
 
 
         setShapes([]);
+
+
+        sharedState.set(
+          "shapes",
+          []
+        );
 
       };
 
@@ -688,13 +759,29 @@ function Whiteboard({
 
 
           setShapes(
-            (previousShapes) => [
+            (previousShapes) => {
 
-              ...previousShapes,
+              const safeShapes =
+                Array.isArray(previousShapes)
+                  ? previousShapes
+                  : [];
 
-              newShape
 
-            ]
+              const updatedShapes = [
+                ...safeShapes,
+                newShape
+              ];
+
+
+              sharedState.set(
+                "shapes",
+                updatedShapes
+              );
+
+
+              return updatedShapes;
+
+            }
           );
 
 
@@ -765,13 +852,29 @@ function Whiteboard({
 
 
           setShapes(
-            (previousShapes) => [
+            (previousShapes) => {
 
-              ...previousShapes,
+              const safeShapes =
+                Array.isArray(previousShapes)
+                  ? previousShapes
+                  : [];
 
-              newShape
 
-            ]
+              const updatedShapes = [
+                ...safeShapes,
+                newShape
+              ];
+
+
+              sharedState.set(
+                "shapes",
+                updatedShapes
+              );
+
+
+              return updatedShapes;
+
+            }
           );
 
 
@@ -826,13 +929,29 @@ function Whiteboard({
 
 
           setShapes(
-            (previousShapes) => [
+            (previousShapes) => {
 
-              ...previousShapes,
+              const safeShapes =
+                Array.isArray(previousShapes)
+                  ? previousShapes
+                  : [];
 
-              newShape
 
-            ]
+              const updatedShapes = [
+                ...safeShapes,
+                newShape
+              ];
+
+
+              sharedState.set(
+                "shapes",
+                updatedShapes
+              );
+
+
+              return updatedShapes;
+
+            }
           );
 
 
@@ -888,13 +1007,29 @@ function Whiteboard({
 
 
           setShapes(
-            (previousShapes) => [
+            (previousShapes) => {
 
-              ...previousShapes,
+              const safeShapes =
+                Array.isArray(previousShapes)
+                  ? previousShapes
+                  : [];
 
-              newShape
 
-            ]
+              const updatedShapes = [
+                ...safeShapes,
+                newShape
+              ];
+
+
+              sharedState.set(
+                "shapes",
+                updatedShapes
+              );
+
+
+              return updatedShapes;
+
+            }
           );
 
 
@@ -1114,6 +1249,12 @@ function Whiteboard({
                     shape;
 
 
+                  sharedState.set(
+                    "shapes",
+                    updatedShapes
+                  );
+
+
                   return updatedShapes;
 
                 }
@@ -1274,6 +1415,12 @@ function Whiteboard({
         );
 
 
+        sharedState.set(
+          "shapes",
+          safeShapes
+        );
+
+
         /*
           Synchronize Undo with
           other users and MongoDB.
@@ -1386,6 +1533,12 @@ function Whiteboard({
 
 
         setShapes([]);
+
+
+        sharedState.set(
+          "shapes",
+          []
+        );
 
 
         if (socket.connected) {
