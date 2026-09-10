@@ -16,3 +16,12 @@ SyncSpace backend services providing real-time collaboration persistence, docume
     "email": "john@example.com",
     "password": "password123"
   }
+
+## Backend Health Check
+
+SyncSpace provides a backend health-check endpoint to verify that the server is running and the MongoDB connection is available.
+
+### Endpoint
+
+```text
+GET /api/health
