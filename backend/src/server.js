@@ -5,6 +5,7 @@ import http from "http";
 import cors from "cors";
 import { Server } from "socket.io";
 import { socketHandler } from "./socket/socketHandler.js";
+import mongoose from "mongoose";
 
 import connectDatabase from "./config/database.js";
 
@@ -138,6 +139,11 @@ app.get(
 
   (req, res) => {
 
+    const databaseStatus =
+      mongoose.connection.readyState === 1
+        ? "connected"
+        : "disconnected";
+
     res.status(200).json({
 
       success: true,
@@ -146,7 +152,7 @@ app.get(
 
       service: "SyncSpace Backend",
 
-      database: "connected",
+      database: databaseStatus,
 
       timestamp: new Date().toISOString()
 
